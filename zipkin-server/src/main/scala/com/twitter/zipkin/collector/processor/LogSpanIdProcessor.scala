@@ -25,12 +25,15 @@ import com.twitter.logging.Logger
  * Adds server side duration data to ostrich, which
  * in turn can be sent to a monitoring system where it can be queried.
  */
-class LogSpanIdProcessor extends Processor[Span] {
+class LogSpanIdProcessor extends ProcessorFilter[Seq[Span], Seq[Span]] {
 
   val logger = Logger.get("spanid")
 
-  def process(span: Span): Future[Unit] = {
-    logger.info(span.id + " " + span.firstAnnotation.getOrElse(0))
+  def apply(spans: Seq[Span]): Seq[Span] = {
+    spans foreach { span =>
+      logger.info(span.id + " " + span.firstAnnotation.map(_.timestamp).getOrElse(0))
+    }
+    spans
   }
 
   def shutdown() {}
