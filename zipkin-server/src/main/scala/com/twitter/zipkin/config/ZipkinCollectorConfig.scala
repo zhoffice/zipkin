@@ -106,6 +106,7 @@ trait ZipkinCollectorConfig extends ZipkinConfig[ZipkinCollector] {
 
   lazy val processor: Processor[T] =
     rawDataFilter andThen
+    new LogSpanIdProcessor() andThen
     new SamplerProcessorFilter(globalSampler) andThen
     new SequenceProcessor[Span](
       new FanoutProcessor[Span]({

@@ -82,5 +82,13 @@ new ScribeZipkinCollectorConfig {
           filename = "stats.log"
           formatter = BareFormatterConfig
         }
+    ) :: LoggerFactory (
+      node = "spanid",
+      level = Level.INFO,
+      useParents = false,
+      handlers = new FileHandlerConfig {
+        filename = "spanid.log"
+        formatter = BareFormatterConfig
+      }
     )
 }
