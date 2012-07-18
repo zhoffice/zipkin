@@ -23,19 +23,16 @@ class GetSpansInHour(args : Args) extends Job(args) with DefaultDateRangeJob {
     SpanSource()
       .read
       .mapTo(0 -> ('id, 'annotations) ) { s : Span => (s.id, s.annotations.toList) }
-      .filter('annotations) { al : List[Annotation] =>
-          if (al.length > 0) {
-            val ts = al(0).timestamp
-            ts > startDate && ts < endDate
-          } else {
-            false
-          }
-      }
-      .flatMap('annotations -> 'timestamp) {al : List[Annotation] =>
-        val ts : Option[Long] = if (al.length > 0) Some(al(0).timestamp) else None
-        ts
-      }
-      .project('id, 'timestamp)
+      .flatMap('annotations -> 'timestamp) { al : List[Annotation] =>
+        if (al.length == 0) None
+        else {
+          val start = al(0).timestamp
+          al.foreach {a : Annotation => if (a.timestamp < start) start == a.timestamp }
+          Some(start)
+        }
+      }.filter('timestamp) { ts : Long =>
+        ts > startDate && ts < endDate
+      }.project('id, 'timestamp)
       .groupBy('id){ _.toList[Long]('timestamp -> 'tsList)}
       .write(Tsv(args("output")))
 }
