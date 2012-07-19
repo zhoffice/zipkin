@@ -31,7 +31,7 @@ class LogSpanIdProcessor extends ProcessorFilter[Seq[Span], Seq[Span]] {
 
   def apply(spans: Seq[Span]): Seq[Span] = {
     spans foreach { span =>
-      logger.info(span.id + " " + span.firstAnnotation.map(_.timestamp).getOrElse(0))
+      logger.info(span.id + "\t" + span.firstAnnotation.map(_.timestamp).getOrElse(0))
     }
     spans
   }
