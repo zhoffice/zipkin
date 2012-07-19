@@ -23,6 +23,8 @@ import com.twitter.util.{FuturePool, Future}
 import com.twitter.zipkin.config.ScribeZipkinCollectorConfig
 import com.twitter.zipkin.gen
 import org.apache.zookeeper.KeeperException
+import com.twitter.scrooge.BinaryThriftStructSerializer
+import com.twitter.zipkin.adapter.ThriftAdapter
 
 /**
  * This class implements the log method from the Scribe Thrift interface.
@@ -63,6 +65,11 @@ class ScribeCollectorService(config: ScribeZipkinCollectorConfig, val writeQueue
     super.shutdown()
   }
 
+  val deserializer = new BinaryThriftStructSerializer[gen.Span] {
+    def codec = gen.Span
+  }
+
+
   /**
    * Accept lists of LogEntries.
    */
@@ -84,6 +91,9 @@ class ScribeCollectorService(config: ScribeZipkinCollectorConfig, val writeQueue
     val scribeMessages = logEntries.flatMap {
       entry =>
         val category = entry.category.toLowerCase()
+        if ("b3".equals(category)) {
+          log.info(ThriftAdapter(deserializer.fromString(entry.message)).serviceNames)
+        }
         if (!categories.contains(category)) {
           Stats.incr("collector.invalid_category")
           None
