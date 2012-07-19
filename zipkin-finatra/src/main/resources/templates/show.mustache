@@ -40,6 +40,8 @@
   </div>
 </div>
 
-<%= content_for :javascript_inline do %>
-  $(Zipkin.Application.Show.initialize("<%= @trace_id %>"));
-<% end %>
+<script type="text/javascript">
+  $(document).ready(function() {
+    {{inlineJs}}
+  });
+</script>
