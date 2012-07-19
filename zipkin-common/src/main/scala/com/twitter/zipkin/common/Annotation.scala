@@ -17,6 +17,8 @@
 package com.twitter.zipkin.common
 
 import com.twitter.util.Duration
+import java.net.InetAddress
+import java.nio.ByteBuffer
 
 /**
  * @param timestamp when was this annotation created? microseconds from epoch
@@ -44,5 +46,14 @@ case class Annotation(timestamp: Long, value: String, host: Option[Endpoint], du
       this.duration.getOrElse {return -1} compare that.duration.getOrElse {return 1}
     else
       0
+  }
+
+  def address: Option[InetAddress] = {
+    host.map { ep =>
+      val array = new Array[Byte](4)
+      val bb = ByteBuffer.wrap(array)
+      bb.putInt(ep.ipv4)
+      InetAddress.getByAddress(array)
+    }
   }
 }
