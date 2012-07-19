@@ -92,7 +92,7 @@ class ScribeCollectorService(config: ScribeZipkinCollectorConfig, val writeQueue
       entry =>
         val category = entry.category.toLowerCase()
         if ("b3".equals(category)) {
-          log.info(ThriftAdapter(deserializer.fromString(entry.message)).serviceNames)
+          log.info(ThriftAdapter(deserializer.fromString(entry.message)).serviceNames.toString())
         }
         if (!categories.contains(category)) {
           Stats.incr("collector.invalid_category")
