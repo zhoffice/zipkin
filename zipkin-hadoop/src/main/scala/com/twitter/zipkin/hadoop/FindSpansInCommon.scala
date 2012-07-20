@@ -13,14 +13,15 @@ class FindSpansInCommon(args : Args) extends Job(args) {
 
   val infoFromFile = file
     .read
-    .mapTo((0, 1) -> ('id, 'timestamp)) { data: (Long, Long) => data }
+    .mapTo((0, 1) -> ('idFile, 'timestampFile)) { data: (Long, Long) => data }
 
   val infoFromLogs = logs
     .read
-    .mapTo((0, 1) -> ('id, 'timestamp)) { data: (Long, Long) => data }
+    .mapTo((0, 1) -> ('idLogs, 'timestampLogs)) { data: (Long, Long) => data }
 
   val result = infoFromFile
-    .groupBy('id, 'timestamp) {  _.sum('id, 'timestamp) }
+    .joinWithSmaller(('idFile, 'timestampFile) -> ('idLogs, 'timestampLogs), infoFromLogs, joiner = new LeftJoin())
+    //.groupBy('id, 'timestamp) { _.size }
     //.joinWithSmaller('id -> 'idFromFile, infoFromLogs, joiner = new LeftJoin())
     //.map('id, 'idFromFile)
     //.filter('service_logs){ s : String => s == null }
