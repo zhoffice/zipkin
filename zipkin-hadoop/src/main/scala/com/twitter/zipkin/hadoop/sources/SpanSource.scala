@@ -81,7 +81,7 @@ trait LzoTsv extends DelimitedScheme {
   /**
  * This is the source for trace data. Directories are like so: /logs/zipkin/yyyy/mm/dd/hh
  */
-case class SpanSource(implicit dateRange: DateRange) extends HourlySuffixLzoThrift[Span]("/logs/zipkin/", dateRange)
+case class SpanSource(implicit dateRange: DateRange) extends HourlySuffixLzoThrift[Span]("/logs/zipkin", dateRange)
 
 case class SpanSource1(implicit dateRange: DateRange) extends HourlySuffixLzoThrift[Span]("good_data", dateRange)
 
