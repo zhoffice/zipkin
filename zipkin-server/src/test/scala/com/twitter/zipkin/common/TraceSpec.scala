@@ -20,7 +20,7 @@ import org.specs.Specification
 import com.twitter.zipkin.gen
 import collection.mutable
 import java.nio.ByteBuffer
-import com.twitter.zipkin.query.SpanTreeEntry
+import com.twitter.zipkin.query.{Timespan, Trace, TraceSummary, SpanTreeEntry}
 import com.twitter.zipkin.adapter.{ThriftQueryAdapter, ThriftAdapter}
 
 class TraceSpec extends Specification {
@@ -153,9 +153,9 @@ class TraceSpec extends Specification {
     "sort spans by first annotation timestamp" in {
       val inputSpans = List[Span](span4, span3, span5, span1, span2)
       val expectedTrace = Trace(List[Span](span1, span2, span3, span4, span5))
-      val actualTrace = Trace(inputSpans).sortedByTimestamp
+      val actualTrace = Trace(inputSpans)
 
-      expectedTrace mustEqual actualTrace
+      expectedTrace.spans mustEqual actualTrace.spans
     }
 
     "merge spans" in {
@@ -175,7 +175,7 @@ class TraceSpec extends Specification {
       val spanToMerge2 = Span(12345, "methodcall2", span2Id, Some(span1Id), ann2, Nil)
       val spanMerged = Span(12345, "methodcall2", span2Id, Some(span1Id), annMerged, Nil)
 
-      Trace(List(spanMerged)) mustEqual Trace(List(spanToMerge1, spanToMerge2)).mergeSpans
+      Trace(List(spanMerged)).spans mustEqual Trace(List(spanToMerge1, spanToMerge2)).spans
     }
 
     "get rootmost span from full trace" in {

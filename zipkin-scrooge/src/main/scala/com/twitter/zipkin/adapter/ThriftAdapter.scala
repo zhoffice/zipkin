@@ -16,8 +16,10 @@
  */
 package com.twitter.zipkin.adapter
 
+import com.twitter.util.Duration
 import com.twitter.zipkin.gen
 import com.twitter.zipkin.common._
+import java.util.concurrent.TimeUnit
 
 object ThriftAdapter extends Adapter {
   type annotationType = gen.Annotation
@@ -25,7 +27,6 @@ object ThriftAdapter extends Adapter {
   type binaryAnnotationType = gen.BinaryAnnotation
   type endpointType = gen.Endpoint
   type spanType = gen.Span
-  type traceSummaryType = gen.TraceSummary
 
   /* Annotation from Thrift */
   def apply(a: annotationType): Annotation = {
@@ -35,12 +36,12 @@ object ThriftAdapter extends Adapter {
     if ("".equals(a.value))
       throw new IllegalArgumentException("Annotation must have a value: %s".format(a.toString))
 
-    new Annotation(a.timestamp, a.value, a.host.map { this(_) })
+    new Annotation(a.timestamp, a.value, a.host.map { this(_) }, a.duration.map(Duration(_, TimeUnit.MICROSECONDS)))
   }
 
   /* Annotation to Thrift */
   def apply(a: Annotation): annotationType = {
-    gen.Annotation(a.timestamp, a.value, a.host.map { this(_) })
+    gen.Annotation(a.timestamp, a.value, a.host.map { this(_) }, a.duration.map(_.inMicroseconds.toInt))
   }
 
   /* AnnotationType from Thrift */
@@ -106,25 +107,12 @@ object ThriftAdapter extends Adapter {
       case b => b.map { this(_) }
     }
 
-    new Span(s.traceId, s.name, s.id, s.parentId, annotations, binaryAnnotations)
+    new Span(s.traceId, s.name, s.id, s.parentId, annotations, binaryAnnotations, s.debug)
   }
 
   /* Span to Thrift */
   def apply(s: Span): spanType = {
     gen.Span(s.traceId, s.name, s.id, s.parentId, s.annotations.map { this(_) },
-      s.binaryAnnotations.map { this(_) })
-  }
-
-  /* TraceSummary from Thrift */
-  def apply(t: traceSummaryType): TraceSummary = {
-    new TraceSummary(t.traceId, t.startTimestamp, t.endTimestamp,
-      t.durationMicro, t.serviceCounts,
-      t.endpoints.map(ThriftAdapter(_)).toList)
-  }
-
-  /* TraceSummary to Thrift */
-  def apply(t: TraceSummary): traceSummaryType = {
-    gen.TraceSummary(t.traceId, t.startTimestamp, t.endTimestamp,
-      t.durationMicro, t.serviceCounts, t.endpoints.map(ThriftAdapter(_)))
+      s.binaryAnnotations.map { this(_) }, s.debug)
   }
 }

@@ -16,12 +16,11 @@
  */
 package com.twitter.zipkin.query.adjusters
 
-import com.twitter.zipkin.gen
-import scala.collection.Map
-import com.twitter.zipkin.common._
 import com.twitter.finagle.tracing.{Trace => FTrace}
-import com.twitter.zipkin.query.SpanTreeEntry
-
+import com.twitter.zipkin.common._
+import com.twitter.zipkin.{Constants, gen}
+import com.twitter.zipkin.query.{Trace, SpanTreeEntry}
+import scala.collection.Map
 
 class TimeSkewAdjuster extends Adjuster {
 
@@ -38,7 +37,7 @@ class TimeSkewAdjuster extends Adjuster {
       case None => return trace // no root span found, returning as is
       case Some(s) => {
         val spans = adjust(trace.getSpanTree(s, trace.getIdToChildrenMap), None)
-        Trace(spans).sortedByTimestamp
+        Trace(spans)
       }
     }
   }
@@ -265,7 +264,8 @@ class TimeSkewAdjuster extends Adjuster {
       val annotations = span.annotations.map { a =>
         a.host match {
           case Some(host) =>
-            if (clockSkew.endpoint.ipv4 == host.ipv4) {
+            if (clockSkew.endpoint.ipv4 == host.ipv4 ||
+              (a.value == Constants.ClientRecv || a.value == Constants.ClientSend) && Constants.LocalhostLoopBackIP == host.ipv4) {
               // found our host, adjust timestamp and add
               Annotation(a.timestamp - clockSkew.skew, a.value, Some(host))
             } else {

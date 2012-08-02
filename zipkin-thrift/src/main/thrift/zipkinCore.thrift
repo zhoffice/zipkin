@@ -33,7 +33,8 @@ struct Endpoint {
 struct Annotation {
   1: i64 timestamp                 // microseconds from epoch
   2: string value                  // what happened at the timestamp?
-  3: optional Endpoint host                 // host this happened on
+  3: optional Endpoint host        // host this happened on
+  4: optional i32 duration         // how long did the operation take? microseconds
 }
 
 enum AnnotationType { BOOL, BYTES, I16, I32, I64, DOUBLE, STRING }
@@ -52,4 +53,6 @@ struct Span {
   5: optional i64 parent_id,                // parent span id
   6: list<Annotation> annotations, // list of all annotations/events that occured
   8: list<BinaryAnnotation> binary_annotations // any binary annotations
+  9: optional bool debug = 0       // if true, we DEMAND that this span passes all samplers
 }
+

@@ -7,11 +7,29 @@ import java.io.File
 
 object Zipkin extends Build {
 
-  lazy val zipkin = Project(id = "zipkin",
-                            base = file(".")) aggregate(hadoop, hadoopjobrunner, test, thrift, server, common, scrooge, scribe)
-  
+  val CASSIE_VERSION  = "0.22.1"
+  val FINAGLE_VERSION = "5.3.1"
+  val OSTRICH_VERSION = "8.2.1"
+  val UTIL_VERSION    = "5.3.1"
+
   val proxyRepo = Option(System.getenv("SBT_PROXY_REPO"))
   val travisCi = Option(System.getenv("SBT_TRAVIS_CI")) // for adding travis ci maven repos before others
+
+  lazy val testDependencies = Seq(
+    "org.scala-tools.testing" % "specs_2.9.1"  % "1.6.9" % "test",
+    "org.jmock"               % "jmock"        % "2.4.0" % "test",
+    "org.hamcrest"            % "hamcrest-all" % "1.1"   % "test",
+    "cglib"                   % "cglib"        % "2.2.2" % "test",
+    "asm"                     % "asm"          % "1.5.3" % "test",
+    "org.objenesis"           % "objenesis"    % "1.1"   % "test"
+  )
+
+  lazy val zipkin =
+    Project(
+      id = "zipkin",
+      base = file(".")
+    ) aggregate(hadoop, hadoopjobrunner, test, thrift, server, common, scrooge, scribe, web)
+  
 
   lazy val hadoop = Project(
     id = "zipkin-hadoop",
@@ -22,7 +40,7 @@ object Zipkin extends Build {
       TravisCiRepos.newSettings).settings(
 
       name := "zipkin-hadoop",
-      version := "0.2.0-SNAPSHOT",
+      version := "0.3.0-SNAPSHOT",
       parallelExecution in Test := false,
       libraryDependencies ++= Seq(
         "com.twitter" % "scalding_2.9.1"       % "0.5.3",
@@ -73,7 +91,7 @@ object Zipkin extends Build {
     TravisCiRepos.newSettings).settings(
 
     name := "zipkin-hadoop-job-runner",
-    version := "0.2.0-SNAPSHOT",
+    version := "0.3.0-SNAPSHOT",
     parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-log4j12"          % "1.6.4" % "runtime",
@@ -97,16 +115,8 @@ object Zipkin extends Build {
       CompileThrift.newSettings ++
       TravisCiRepos.newSettings).settings(
     name := "zipkin-test",
-    version := "0.2.0-SNAPSHOT",
-    libraryDependencies ++= Seq(
-      /* Test dependencies */
-      "org.scala-tools.testing" % "specs_2.9.1"  % "1.6.9" % "test",
-      "org.jmock"               % "jmock"        % "2.4.0" % "test",
-      "org.hamcrest"            % "hamcrest-all" % "1.1"   % "test",
-      "cglib"                   % "cglib"        % "2.2.2" % "test",
-      "asm"                     % "asm"          % "1.5.3" % "test",
-      "org.objenesis"           % "objenesis"    % "1.1"   % "test"
-    )
+    version := "0.3.0-SNAPSHOT",
+    libraryDependencies ++= testDependencies
   ) dependsOn(server, scribe)
 
   lazy val thrift =
@@ -119,18 +129,13 @@ object Zipkin extends Build {
         CompileThrift.newSettings ++
         TravisCiRepos.newSettings).settings(
       name := "zipkin-thrift",
-      version := "0.2.0-SNAPSHOT",
+      version := "0.3.0-SNAPSHOT",
       libraryDependencies ++= Seq(
         "org.apache.thrift" % "libthrift" % "0.5.0",
         "org.slf4j" % "slf4j-api" % "1.5.8"
       ),
       sources in (Compile, doc) ~= (_ filter (_.getName contains "src_managed"))
     )
-
-  val CASSIE_VERSION  = "0.22.0"
-  val FINAGLE_VERSION = "5.1.0"
-  val OSTRICH_VERSION = "8.1.0"
-  val UTIL_VERSION    = "5.2.0"
 
   lazy val common =
     Project(
@@ -140,23 +145,16 @@ object Zipkin extends Build {
         StandardProject.newSettings ++
         SubversionPublisher.newSettings ++
         TravisCiRepos.newSettings).settings(
-      version := "0.2.0-SNAPSHOT",
+      version := "0.3.0-SNAPSHOT",
       libraryDependencies ++= Seq(
+        "com.twitter" % "finagle-ostrich4"  % FINAGLE_VERSION,
         "com.twitter" % "finagle-thrift"    % FINAGLE_VERSION,
         "com.twitter" % "finagle-zipkin"    % FINAGLE_VERSION,
         "com.twitter" % "ostrich"           % OSTRICH_VERSION,
         "com.twitter" % "util-core"         % UTIL_VERSION,
 
-        "com.twitter.common.zookeeper" % "client"    % "0.0.6",
-
-        /* Test dependencies */
-        "org.scala-tools.testing" % "specs_2.9.1"  % "1.6.9" % "test",
-        "org.jmock"               % "jmock"        % "2.4.0" % "test",
-        "org.hamcrest"            % "hamcrest-all" % "1.1"   % "test",
-        "cglib"                   % "cglib"        % "2.2.2" % "test",
-        "asm"                     % "asm"          % "1.5.3" % "test",
-        "org.objenesis"           % "objenesis"    % "1.1"   % "test"
-      )
+        "com.twitter.common.zookeeper" % "client"    % "0.0.6"
+      ) ++ testDependencies
     )
 
   lazy val scrooge =
@@ -169,7 +167,7 @@ object Zipkin extends Build {
         CompileThriftScrooge.newSettings ++
         TravisCiRepos.newSettings
     ).settings(
-      version := "0.2.0-SNAPSHOT",
+      version := "0.3.0-SNAPSHOT",
       libraryDependencies ++= Seq(
         "com.twitter" % "finagle-ostrich4"  % FINAGLE_VERSION,
         "com.twitter" % "finagle-thrift"    % FINAGLE_VERSION,
@@ -182,16 +180,8 @@ object Zipkin extends Build {
           incompatible with cassie 0.21.5 so made these intransitive
         */
         "com.twitter" % "scrooge"               % "3.0.1" intransitive(),
-        "com.twitter" % "scrooge-runtime_2.9.2" % "3.0.1" intransitive(),
-
-        /* Test dependencies */
-        "org.scala-tools.testing" % "specs_2.9.1"  % "1.6.9" % "test",
-        "org.jmock"               % "jmock"        % "2.4.0" % "test",
-        "org.hamcrest"            % "hamcrest-all" % "1.1"   % "test",
-        "cglib"                   % "cglib"        % "2.2.2" % "test",
-        "asm"                     % "asm"          % "1.5.3" % "test",
-        "org.objenesis"           % "objenesis"    % "1.1"   % "test"
-      ),
+        "com.twitter" % "scrooge-runtime_2.9.2" % "3.0.1" intransitive()
+      ) ++ testDependencies,
 
       CompileThriftScrooge.scroogeVersion := "3.0.1"
 
@@ -207,7 +197,7 @@ object Zipkin extends Build {
         SubversionPublisher.newSettings ++
         TravisCiRepos.newSettings
     ).settings(
-      version := "0.2.0-SNAPSHOT",
+      version := "0.3.0-SNAPSHOT",
 
       libraryDependencies ++= Seq(
         "com.twitter" % "cassie-core"       % CASSIE_VERSION intransitive(),
@@ -225,16 +215,8 @@ object Zipkin extends Build {
         "com.twitter.common.zookeeper" % "group"     % "0.0.9",
 
         "commons-codec" % "commons-codec" % "1.5",
-        "org.iq80.snappy" % "snappy" % "0.1",
-
-        /* Test dependencies */
-        "org.scala-tools.testing" % "specs_2.9.1"  % "1.6.9" % "test",
-        "org.jmock"               % "jmock"        % "2.4.0" % "test",
-        "org.hamcrest"            % "hamcrest-all" % "1.1"   % "test",
-        "cglib"                   % "cglib"        % "2.2.2" % "test",
-        "asm"                     % "asm"          % "1.5.3" % "test",
-        "org.objenesis"           % "objenesis"    % "1.1"   % "test"
-      ),
+        "org.iq80.snappy" % "snappy" % "0.1"
+      ) ++ testDependencies,
 
       PackageDist.packageDistZipName := "zipkin-server.zip",
       BuildProperties.buildPropertiesPackage := "com.twitter.zipkin",
@@ -255,16 +237,8 @@ object Zipkin extends Build {
         SubversionPublisher.newSettings ++
         TravisCiRepos.newSettings
     ).settings(
-      version := "0.2.0-SNAPSHOT",
-      libraryDependencies ++= Seq(
-        /* Test dependencies */
-        "org.scala-tools.testing" % "specs_2.9.1"  % "1.6.9" % "test",
-        "org.jmock"               % "jmock"        % "2.4.0" % "test",
-        "org.hamcrest"            % "hamcrest-all" % "1.1"   % "test",
-        "cglib"                   % "cglib"        % "2.2.2" % "test",
-        "asm"                     % "asm"          % "1.5.3" % "test",
-        "org.objenesis"           % "objenesis"    % "1.1"   % "test"
-      ),
+      version := "0.3.0-SNAPSHOT",
+      libraryDependencies ++= testDependencies,
 
       PackageDist.packageDistZipName := "zipkin-scribe.zip",
       BuildProperties.buildPropertiesPackage := "com.twitter.zipkin",
@@ -275,6 +249,31 @@ object Zipkin extends Build {
           (base / "config" +++ base / "src" / "test" / "resources").get
       }
     ).dependsOn(server, scrooge)
+
+  lazy val web =
+    Project(
+      id = "zipkin-finatra",
+      base = file("zipkin-finatra"),
+      settings = Project.defaultSettings ++
+        StandardProject.newSettings ++
+        TravisCiRepos.newSettings
+    ).settings(
+      version := "0.3.0-SNAPSHOT",
+      resolvers += "finatra" at "http://repo.juliocapote.com",
+      resolvers += "codahale" at "http://repo.codahale.com",
+
+      libraryDependencies ++= Seq(
+        "com.twitter" % "finatra" % "0.2.1",
+
+        "com.twitter.common.zookeeper" % "server-set" % "1.0.7",
+
+        "com.twitter" % "finagle-serversets" % FINAGLE_VERSION,
+        "com.twitter" % "finagle-zipkin"     % FINAGLE_VERSION
+      ),
+
+      PackageDist.packageDistZipName := "zipkin-finatra.zip",
+      BuildProperties.buildPropertiesPackage := "com.twitter.zipkin"
+  ).dependsOn(common, scrooge)
 }
 
 /*
