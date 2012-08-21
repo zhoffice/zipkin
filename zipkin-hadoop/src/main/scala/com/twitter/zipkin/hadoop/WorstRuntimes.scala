@@ -17,8 +17,8 @@
 package com.twitter.zipkin.hadoop
 
 import com.twitter.scalding._
-import com.twitter.zipkin.gen.{Span, Constants, Annotation}
-import com.twitter.zipkin.hadoop.sources.{PrepNoNamesSpanSource}
+import sources.{PreprocessedSpanSource, PrepNoNamesSpanSource}
+import com.twitter.zipkin.gen.{SpanServiceName, Span, Constants, Annotation}
 
 /**
  * Obtain the IDs and the durations of the one hundred service calls which take the longest per service
@@ -28,16 +28,15 @@ class WorstRuntimes(args: Args) extends Job(args) with DefaultDateRangeJob {
 
   val clientAnnotations = Seq(Constants.CLIENT_RECV, Constants.CLIENT_SEND)
 
-  val preprocessed = PrepNoNamesSpanSource()
+  val preprocessed = PreprocessedSpanSource()
     .read
-    .mapTo(0 -> ('id, 'annotations)) {
-      s : Span => (s.id, s.annotations.toList)
+    .mapTo(0 -> ('service, 'id, 'annotations)) {
+      s : SpanServiceName => (s.service_name, s.id, s.annotations.toList)
     }
 
   val result = preprocessed
-    .project('id, 'annotations)
     // let's find those client annotations and convert into service name and duration
-    .flatMap('annotations -> ('service, 'duration)) { annotations: List[Annotation] =>
+    .flatMap('annotations -> 'duration) { annotations: List[Annotation] =>
      var clientSend: Option[Annotation] = None
      var clientReceived: Option[Annotation] = None
       annotations.foreach { a =>
@@ -46,7 +45,7 @@ class WorstRuntimes(args: Args) extends Job(args) with DefaultDateRangeJob {
       }
       // only return a value if we have both annotations
       for (cs <- clientSend; cr <- clientReceived)
-        yield (cs.getHost.service_name, (cr.timestamp - cs.timestamp) / 1000)
+        yield (cr.timestamp - cs.timestamp) / 1000
     }.discard('annotations)
     //sort by duration, find the 100 largest
     .groupBy('service) { _.sortBy('duration).reverse.take(100)}

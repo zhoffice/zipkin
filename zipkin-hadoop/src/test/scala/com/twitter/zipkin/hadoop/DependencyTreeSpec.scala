@@ -59,15 +59,15 @@ class DependencyTreeSpec extends Specification with TupleConversions {
         .source(PrepTsvSource(), Util.getSpanIDtoNames(spans))
         .sink[(String, String, Long)](Tsv("outputFile")) {
         val map = new HashMap[String, Long]()
-        map("service, null") = 0
+        map("service, " + Util.UNKNOWN_SERVICE_NAME) = 0
         map("service1, service") = 0
-        map("service1, null") = 0
+        map("service1, " + Util.UNKNOWN_SERVICE_NAME) = 0
         outputBuffer => outputBuffer foreach { e =>
           map(e._1 + ", " + e._2) = e._3
         }
-        map("service, null") mustEqual 31
+        map("service, " + Util.UNKNOWN_SERVICE_NAME) mustEqual 31
         map("service1, service") mustEqual 31
-        map("service1, null") mustEqual 20
+        map("service1, " + Util.UNKNOWN_SERVICE_NAME) mustEqual 20
       }.run.finish
     }
   }

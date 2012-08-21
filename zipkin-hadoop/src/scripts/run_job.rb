@@ -1,5 +1,19 @@
 #!/usr/bash/env ruby
-# Script that rxuns a single scalding job 
+# Copyright 2012 Twitter Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Script that runs a single scalding job
 
 require 'optparse'
 require 'ostruct'
@@ -20,12 +34,13 @@ class OptparseJobArguments
     options.job = nil
     options.uses_settings = false
     options.uses_hadoop_config = false
+    options.set_timezone = false
     options.dates = []
     options.output = ""
     options.preprocessor = false
 
     opts = OptionParser.new do |opts|
-      opts.banner = "Usage: run_job.rb -j JOB -d DATE -o OUTPUT -p -s SETTINGS -c CONFIG"
+      opts.banner = "Usage: run_job.rb -j JOB -d DATE -o OUTPUT -p -t TIMEZONE -s SETTINGS -c CONFIG"
 
       opts.separator ""
       opts.separator "Specific options:"
@@ -47,6 +62,11 @@ class OptparseJobArguments
       
       opts.on("-p", "--[no-]prep", "Run as preprocessor") do |v|
         options.preprocessor = true
+      end
+
+      opts.on("-t", "--tz [TIMEZONE]", "Specify timezone for job. Default is local time") do |timezone|
+        options.set_timezone = true
+        options.timezone = timezone || ''
       end
 
       opts.on("-s", "--settings [SETTINGS]", "Optional settings for the job") do |settings|
@@ -110,7 +130,8 @@ end
 cmd_head = File.dirname(__FILE__) + "/scald.rb --hdfs com.twitter.zipkin.hadoop."
 settings_string = options.uses_settings ? " " + options.settings : ""
 cmd_date = date_to_cmd(start_date) + " " + date_to_cmd(end_date)
-cmd_args = options.job + settings_string  + " --date " + cmd_date + " --tz UTC"
+timezone_cmd = options.set_timezone ? " --tz " + options.timezone : ""
+cmd_args = options.job + settings_string  + " --date " + cmd_date + timezone_cmd
 
 if options.preprocessor
   if not remote_file_exists?(time_to_remote_file(end_date, options.job + "/") + "/_SUCCESS", options)
