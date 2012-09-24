@@ -299,6 +299,23 @@ object Zipkin extends Build {
       libraryDependencies ++= testDependencies
     ).dependsOn(collectorCore, scrooge)
 
+  lazy val collectorKafka =
+    Project(
+      id = "zipkin-collector-kafka",
+      base = file("zipkin-collector-kafka"),
+      settings = Project.defaultSettings ++
+        StandardProject.newSettings ++
+        SubversionPublisher.newSettings ++
+        TravisCiRepos.newSettings
+    ).settings(
+      version := "0.3.0-SNAPSHOT",
+      libraryDependencies ++= Seq(
+        "storm" % "storm" % "0.8.1-wip5",
+        "storm" % "trident-kafka" % "0.0.2-wip2"
+      ) ++ testDependencies
+    ).dependsOn(collectorCore, scrooge)
+
+
   lazy val collectorService = Project(
     id = "zipkin-collector-service",
     base = file("zipkin-collector-service"),
