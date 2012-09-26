@@ -310,8 +310,13 @@ object Zipkin extends Build {
     ).settings(
       version := "0.3.0-SNAPSHOT",
       libraryDependencies ++= Seq(
-        "org.apache.kafka" % "kafka" % "0.7.1"
-      ) ++ testDependencies
+        "org.clojars.jasonjckn"      % "kafka_2.9.1"    % "0.7.0"
+      ) ++ testDependencies,
+      resolvers ++= (proxyRepo match {
+        case None => Seq(
+          "clojars" at "http://clojars.org/repo")
+        case Some(pr) => Seq() // if proxy is set we assume that it has the artifacts we would get from the above repo
+      })
     ).dependsOn(collectorCore, scrooge)
 
 

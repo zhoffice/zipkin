@@ -13,6 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import com.twitter.finagle.Service
+import com.twitter.zipkin.collector.filter.{ClientIndexFilter, SamplerFilter}
+import com.twitter.zipkin.collector.Kafka
+import com.twitter.zipkin.collector.processor.{StatsService, IndexService, StorageService, FanoutService}
+import com.twitter.zipkin.common.Span
 import com.twitter.zipkin.config._
 import com.twitter.zipkin.config.sampler.NullAdaptiveSamplerConfig
 import com.twitter.zipkin.config.zookeeper.ZooKeeperConfig
@@ -22,7 +28,7 @@ import com.twitter.logging.config._
 import com.twitter.ostrich.admin.{TimeSeriesCollectorFactory, JsonStatsLoggerFactory, StatsFactory}
 
 // development mode.
-new ScribeZipkinCollectorConfig {
+new ScribeZipkinCollectorConfig { self =>
 
   serverPort = 9410
   adminPort  = 9900
@@ -63,6 +69,21 @@ new ScribeZipkinCollectorConfig {
   def zkConfig = new ZooKeeperConfig {
     servers = List("localhost:2181")
   }
+
+  def kafkaConfig = new KafkaConfig {
+    statsReceiver = self.statsReceiver
+  }
+  lazy val kafka: Kafka = kafkaConfig()
+
+  override lazy val processor: Service[T, Unit] =
+    rawDataFilter andThen
+      new SamplerFilter(globalSampler) andThen
+      new FanoutService[Span](
+        new StorageService(storage) ::
+        (new ClientIndexFilter andThen new IndexService(index)) ::
+        new StatsService ::
+        kafka
+      )
 
   loggers =
     LoggerFactory (
