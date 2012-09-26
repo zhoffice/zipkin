@@ -28,7 +28,7 @@ object Zipkin extends Build {
     Project(
       id = "zipkin",
       base = file(".")
-    ) aggregate(hadoop, hadoopjobrunner, test, thrift, queryService, common, scrooge, collectorScribe, web, cassandra, collectorCore, collectorService)
+    ) aggregate(hadoop, hadoopjobrunner, test, thrift, queryService, common, scrooge, collectorScribe, web, cassandra, collectorCore, collectorService, kafka)
   
 
   lazy val hadoop = Project(
@@ -299,10 +299,10 @@ object Zipkin extends Build {
       libraryDependencies ++= testDependencies
     ).dependsOn(collectorCore, scrooge)
 
-  lazy val collectorKafka =
+  lazy val kafka =
     Project(
-      id = "zipkin-collector-kafka",
-      base = file("zipkin-collector-kafka"),
+      id = "zipkin-kafka",
+      base = file("zipkin-kafka"),
       settings = Project.defaultSettings ++
         StandardProject.newSettings ++
         SubversionPublisher.newSettings ++
@@ -310,8 +310,7 @@ object Zipkin extends Build {
     ).settings(
       version := "0.3.0-SNAPSHOT",
       libraryDependencies ++= Seq(
-        "storm" % "storm" % "0.8.1-wip5",
-        "storm" % "trident-kafka" % "0.0.2-wip2"
+        "org.apache.kafka" % "kafka" % "0.7.1"
       ) ++ testDependencies
     ).dependsOn(collectorCore, scrooge)
 
@@ -335,7 +334,7 @@ object Zipkin extends Build {
       base =>
         (base / "config" +++ base / "src" / "test" / "resources").get
     }
-  ).dependsOn(collectorCore, collectorScribe, cassandra)
+  ).dependsOn(collectorCore, collectorScribe, cassandra, kafka)
 
   lazy val web =
     Project(
