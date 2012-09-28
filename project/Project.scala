@@ -43,7 +43,7 @@ object Zipkin extends Build {
       version := "0.3.0-SNAPSHOT",
       parallelExecution in Test := false,
       libraryDependencies ++= Seq(
-        "com.twitter" % "scalding_2.9.1"       % "0.5.3",
+        "com.twitter" % "scalding_2.9.1"       % "0.7.3",
         /*
           FIXME ElephantBird 3.0.0 picks up libthrift 0.7.0, which is currently
           incompatible with sbt-thrift so made these intransitive
