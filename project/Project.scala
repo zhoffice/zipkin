@@ -30,7 +30,7 @@ object Zipkin extends Build {
     SubversionPublisher.subversionRepository := Some("https://svn.twitter.biz/maven-public"),
     crossPaths := false            /* Removes Scala version from artifact name */
   )
-  def defaultSettings = Project.defaultSettings ++ StandardProject.newSettings ++ TravisCiRepos.newSettings ++ zipkinSettings
+  def defaultSettings = Project.defaultSettings ++ StandardProject.newSettings ++ TravisCiRepos.newSettings ++ SubversionPublisher.newSettings ++ zipkinSettings
 
   lazy val zipkin =
     Project(
@@ -124,7 +124,7 @@ object Zipkin extends Build {
     Project(
       id = "zipkin-thrift",
       base = file("zipkin-thrift"),
-      settings = defaultSettings ++ SubversionPublisher.newSettings ++ CompileThrift.newSettings
+      settings = defaultSettings ++ CompileThrift.newSettings
     ).settings(
       name := "zipkin-thrift",
       libraryDependencies ++= Seq(
@@ -138,7 +138,7 @@ object Zipkin extends Build {
     Project(
       id = "zipkin-common",
       base = file("zipkin-common"),
-      settings = defaultSettings ++ SubversionPublisher.newSettings
+      settings = defaultSettings
     ).settings(
       libraryDependencies ++= Seq(
         "com.twitter" % "finagle-ostrich4"  % FINAGLE_VERSION,
@@ -155,7 +155,7 @@ object Zipkin extends Build {
     Project(
       id = "zipkin-scrooge",
       base = file("zipkin-scrooge"),
-      settings = defaultSettings ++ SubversionPublisher.newSettings ++ CompileThriftScrooge.newSettings
+      settings = defaultSettings ++ CompileThriftScrooge.newSettings
     ).settings(
       libraryDependencies ++= Seq(
         "com.twitter" % "finagle-ostrich4"  % FINAGLE_VERSION,
@@ -179,7 +179,7 @@ object Zipkin extends Build {
   lazy val collectorCore = Project(
     id = "zipkin-collector-core",
     base = file("zipkin-collector-core"),
-    settings = defaultSettings ++ SubversionPublisher.newSettings
+    settings = defaultSettings
   ).settings(
     libraryDependencies ++= Seq(
       "com.twitter" % "finagle-ostrich4"  % FINAGLE_VERSION,
@@ -199,7 +199,7 @@ object Zipkin extends Build {
   lazy val cassandra = Project(
     id = "zipkin-cassandra",
     base = file("zipkin-cassandra"),
-    settings = defaultSettings ++ SubversionPublisher.newSettings
+    settings = defaultSettings
   ).settings(
     libraryDependencies ++= Seq(
       "com.twitter"     % "cassie-core"       % CASSIE_VERSION,
@@ -219,7 +219,7 @@ object Zipkin extends Build {
     Project(
       id = "zipkin-query-core",
       base = file("zipkin-query-core"),
-      settings = defaultSettings ++ SubversionPublisher.newSettings
+      settings = defaultSettings
     ).settings(
       libraryDependencies ++= Seq(
         "com.twitter" % "finagle-ostrich4"  % FINAGLE_VERSION,
@@ -239,7 +239,7 @@ object Zipkin extends Build {
   lazy val queryService = Project(
     id = "zipkin-query-service",
     base = file("zipkin-query-service"),
-    settings = defaultSettings ++ SubversionPublisher.newSettings
+    settings = defaultSettings
   ).settings(
     libraryDependencies ++= testDependencies,
 
@@ -257,7 +257,7 @@ object Zipkin extends Build {
     Project(
       id = "zipkin-collector-scribe",
       base = file("zipkin-collector-scribe"),
-      settings = defaultSettings ++ SubversionPublisher.newSettings
+      settings = defaultSettings
     ).settings(
       libraryDependencies ++= testDependencies
     ).dependsOn(collectorCore, scrooge)
@@ -266,7 +266,7 @@ object Zipkin extends Build {
     Project(
       id = "zipkin-kafka",
       base = file("zipkin-kafka"),
-      settings = defaultSettings ++ SubversionPublisher.newSettings
+      settings = defaultSettings
     ).settings(
       libraryDependencies ++= Seq(
         "org.clojars.jasonjckn"      % "kafka_2.9.1"    % "0.7.0"
@@ -281,7 +281,7 @@ object Zipkin extends Build {
   lazy val collectorService = Project(
     id = "zipkin-collector-service",
     base = file("zipkin-collector-service"),
-    settings = defaultSettings ++ SubversionPublisher.newSettings
+    settings = defaultSettings
   ).settings(
     libraryDependencies ++= testDependencies,
 
