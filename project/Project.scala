@@ -26,7 +26,7 @@ object Zipkin extends Build {
 
   def zipkinSettings = Seq(
     organization := "com.twitter",
-    version := "0.3.0-SNAPSHOT",
+    version := "1.0.1-SNAPSHOT",
     SubversionPublisher.subversionRepository := Some("https://svn.twitter.biz/maven-public"),
     crossPaths := false            /* Removes Scala version from artifact name */
   )
