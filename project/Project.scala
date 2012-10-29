@@ -27,6 +27,7 @@ object Zipkin extends Build {
   def zipkinSettings = Seq(
     organization := "com.twitter",
     version := "0.3.0-SNAPSHOT",
+    SubversionPublisher.subversionRepository := Some("https://svn.twitter.biz/maven-public"),
     crossPaths := false            /* Removes Scala version from artifact name */
   )
   def defaultSettings = Project.defaultSettings ++ StandardProject.newSettings ++ TravisCiRepos.newSettings ++ zipkinSettings
