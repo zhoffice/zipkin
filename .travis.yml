@@ -19,4 +19,4 @@ env:
   - MODULE=zipkin-test
   - MODULE=zipkin-thrift
   - MODULE=zipkin-web
-script: "env SBT_TRAVIS_CI=true bin/sbt 'project $MODULE' test"
+script: "env SBT_TRAVIS_CI=true bin/sbt \"project $MODULE\" test"
