@@ -21,6 +21,7 @@ import com.twitter.ostrich.stats.Stats
 import com.twitter.util.Future
 import com.twitter.zipkin.collector.sampler.GlobalSampler
 import com.twitter.zipkin.common.Span
+import com.twitter.logging.Logger
 
 class SamplerFilter(sampler: GlobalSampler) extends Filter[Span, Unit, Span, Unit] {
   def apply(span: Span, service: Service[Span, Unit]): Future[Unit] = {
@@ -32,6 +33,12 @@ class SamplerFilter(sampler: GlobalSampler) extends Filter[Span, Unit, Span, Uni
      */
     if (span.debug) {
       Stats.incr("debugflag")
+      span.parentId match {
+        case None => {
+          Logger.get.error(span.toString)
+        }
+        case _ =>
+      }
       service(span)
     } else if (sampler(span.traceId)) {
       service(span)
