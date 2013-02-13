@@ -36,6 +36,7 @@ class SamplerFilter(sampler: GlobalSampler) extends Filter[Span, Unit, Span, Uni
       span.parentId match {
         case None => {
           Logger.get.error(span.toString)
+          Stats.incr("debugflag/%d".format(span.endpoints.map { _.ipv4.toString }.mkString(", ")))
         }
         case _ =>
       }
