@@ -20,7 +20,7 @@ import org.specs.Specification
 import org.specs.mock.{ClassMocker, JMocker}
 import scala.collection._
 import com.twitter.zipkin.gen
-import com.twitter.zipkin.common.{Endpoint, Annotation, Span}
+import com.twitter.zipkin.common.{BinaryAnnotation, Endpoint, Annotation, Span}
 import com.twitter.zipkin.query.Trace
 
 class TimeSkewAdjusterSpec extends Specification with JMocker with ClassMocker {
@@ -314,12 +314,54 @@ class TimeSkewAdjusterSpec extends Specification with JMocker with ClassMocker {
 
       // let's see how we did
       val adjustedFlock = adjusted.getSpanById(7330066031642813936L).get
-      val adjustedTflock = adjusted.getSpanById(6924056367845423617L).get
+      val adjustedFlockspan = adjusted.getSpanById(6924056367845423617L).get
       val flockCs = adjustedFlock.getAnnotation(gen.Constants.CLIENT_SEND).get
-      val tflockSr = adjustedTflock.getAnnotation(gen.Constants.SERVER_RECV).get
+      val tflockSr = adjustedFlockspan.getAnnotation(gen.Constants.SERVER_RECV).get
 
       // tflock must receive the request before it send a request to flock
       flockCs.timestamp must be_>(tflockSr.timestamp)
+    }
+
+    "adjust child spans that are way in the future" in {
+      val adserver = Endpoint(170086792, -27267, "adserver")
+      val admixer = Endpoint(170136166, 5432, "admixer_service")
+      val flock_service = Endpoint(170136166, -10318, "flock_service")
+      val flock = Endpoint(2130706433, 0, "flock")
+
+      // Taken from a real-world example
+      val adspan = Span(134823740742430001L, "makeAdRequest", -3640919371647321562L, Some(-118196381023806589L), List(
+        Annotation(1363721314362000L, gen.Constants.CLIENT_RECV, Some(adserver)),
+        Annotation(1363721314323000L, gen.Constants.CLIENT_SEND, Some(adserver)),
+        Annotation(1363721314361000L, gen.Constants.SERVER_SEND, Some(admixer)),
+        Annotation(1363721314323000L, gen.Constants.SERVER_RECV, Some(admixer))), Nil)
+
+      val flockspan = Span(134823740742430001L, "select2", -6621578840377806836L, Some(-3640919371647321562L), List(
+        //                v---- 5 min later?  huh.  wtf?
+        Annotation(1363721614328000L, gen.Constants.CLIENT_RECV, Some(flock_service)),
+        Annotation(1363721614325000L, gen.Constants.CLIENT_SEND, Some(flock_service))), Nil)
+
+      val flockspan2 = Span(134823740742430001L, "select", -246027964864704468L, Some(-6621578840377806836L), List(
+        Annotation(1363721614326000L, gen.Constants.CLIENT_RECV, Some(flock)),
+        Annotation(1363721614325000L, gen.Constants.CLIENT_SEND, Some(flock))), Nil)
+
+      val trace = new Trace(Seq(adspan, flockspan, flockspan2))
+      val adjusted = adjuster.adjust(trace)
+
+      // let's see how we did
+      val adjustedAdspan = adjusted.getSpanById(-3640919371647321562L).get
+      val adjustedFlockspan = adjusted.getSpanById(-6621578840377806836L).get
+      val adjustedFlockspan2 = adjusted.getSpanById(-246027964864704468L).get
+      val adCr = adjustedAdspan.getAnnotation(gen.Constants.CLIENT_RECV).get
+      val fCr  = adjustedFlockspan.getAnnotation(gen.Constants.CLIENT_RECV).get
+      val fCs  = adjustedFlockspan.getAnnotation(gen.Constants.CLIENT_SEND).get
+      val f2Cr  = adjustedFlockspan2.getAnnotation(gen.Constants.CLIENT_RECV).get
+      val f2Cs  = adjustedFlockspan2.getAnnotation(gen.Constants.CLIENT_SEND).get
+
+      // shift evertyhing back
+      adCr.timestamp must beGreaterThanOrEqualTo(fCr.timestamp)
+      adCr.timestamp must beGreaterThanOrEqualTo(fCs.timestamp)
+      adCr.timestamp must beGreaterThanOrEqualTo(f2Cr.timestamp)
+      adCr.timestamp must beGreaterThanOrEqualTo(f2Cs.timestamp)
     }
   }
 }
