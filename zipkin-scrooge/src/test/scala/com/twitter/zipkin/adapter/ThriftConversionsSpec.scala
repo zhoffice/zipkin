@@ -21,98 +21,103 @@ import com.twitter.zipkin.common._
 import com.twitter.zipkin.conversions.thrift._
 import com.twitter.zipkin.gen
 import com.twitter.zipkin.query._
-import org.specs.Specification
-import org.specs.mock.{ClassMocker, JMocker}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
 import java.nio.ByteBuffer
 
-class ThriftConversionsSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class ThriftConversionsSpec extends WordSpec {
 
   "ThriftConversions" should {
-    "convert Annotation" in {
+    "convert Annotation" when {
       "to thrift and back" in {
         val expectedAnn: Annotation = Annotation(123, "value", Some(Endpoint(123, 123, "service")))
-        expectedAnn.toThrift.toAnnotation mustEqual expectedAnn
+        expectedAnn.toThrift.toAnnotation must equal (expectedAnn)
       }
       "to thrift and back, with duration" in {
         val expectedAnn: Annotation = Annotation(123, "value", Some(Endpoint(123, 123, "service")), Some(1.seconds))
-        expectedAnn.toThrift.toAnnotation mustEqual expectedAnn
+        expectedAnn.toThrift.toAnnotation must equal (expectedAnn)
       }
     }
 
-    "convert AnnotationType" in {
+    "convert AnnotationType" when {
       val types = Seq("Bool", "Bytes", "I16", "I32", "I64", "Double", "String")
       "to thrift and back" in {
         types.zipWithIndex.foreach { case (value: String, index: Int) =>
           val expectedAnnType: AnnotationType = AnnotationType(index, value)
-          expectedAnnType.toThrift.toAnnotationType mustEqual expectedAnnType
+          expectedAnnType.toThrift.toAnnotationType must equal (expectedAnnType)
         }
       }
     }
 
-    "convert BinaryAnnotation" in {
+    "convert BinaryAnnotation" when {
       "to thrift and back" in {
         val expectedAnnType = AnnotationType(3, "I32")
         val expectedHost = Some(Endpoint(123, 456, "service"))
         val expectedBA: BinaryAnnotation =
           BinaryAnnotation("something", ByteBuffer.wrap("else".getBytes), expectedAnnType, expectedHost)
-        expectedBA.toThrift.toBinaryAnnotation mustEqual expectedBA
+        expectedBA.toThrift.toBinaryAnnotation must equal (expectedBA)
       }
     }
 
-    "convert Endpoint" in {
+    "convert Endpoint" when {
       "to thrift and back" in {
         val expectedEndpoint: Endpoint = Endpoint(123, 456, "service")
-        expectedEndpoint.toThrift.toEndpoint mustEqual expectedEndpoint
+        expectedEndpoint.toThrift.toEndpoint must equal (expectedEndpoint)
       }
 
       "to thrift and back, with null service" in {
         // TODO this could happen if we deserialize an old style struct
         val actualEndpoint = gen.Endpoint(123, 456, null)
         val expectedEndpoint = Endpoint(123, 456, Endpoint.UnknownServiceName)
-        actualEndpoint.toEndpoint mustEqual expectedEndpoint
+        actualEndpoint.toEndpoint must equal (expectedEndpoint)
       }
     }
 
-    "convert Span" in {
+    "convert Span" when {
       val annotationValue = "NONSENSE"
       val expectedAnnotation = Annotation(1, annotationValue, Some(Endpoint(1, 2, "service")))
       val expectedSpan = Span(12345, "methodcall", 666, None,
         List(expectedAnnotation), Nil)
 
       "to thrift and back" in {
-        expectedSpan.toThrift.toSpan mustEqual expectedSpan
+        expectedSpan.toThrift.toSpan must equal (expectedSpan)
       }
 
       "handle incomplete thrift span" in {
         val noNameSpan = gen.Span(0, null, 0, None, Seq(), Seq())
-        noNameSpan.toSpan must throwA[IncompleteTraceDataException]
+        evaluating { noNameSpan.toSpan } must produce [IncompleteTraceDataException]
 
         val noAnnotationsSpan = gen.Span(0, "name", 0, None, null, Seq())
-        noAnnotationsSpan.toSpan mustEqual Span(0, "name", 0, None, List(), Seq())
+        noAnnotationsSpan.toSpan must equal (Span(0, "name", 0, None, List(), Seq()))
 
         val noBinaryAnnotationsSpan = gen.Span(0, "name", 0, None, Seq(), null)
-        noBinaryAnnotationsSpan.toSpan mustEqual Span(0, "name", 0, None, List(), Seq())
+        noBinaryAnnotationsSpan.toSpan must equal (Span(0, "name", 0, None, List(), Seq()))
       }
     }
 
-    "convert Trace" in {
+    "convert Trace" when {
       "to thrift and back" in {
         val span = Span(12345, "methodcall", 666, None,
           List(Annotation(1, "boaoo", None)), Nil)
         val expectedTrace = Trace(List[Span](span))
         val thriftTrace = expectedTrace.toThrift
         val actualTrace = thriftTrace.toTrace
-        expectedTrace mustEqual actualTrace
+        expectedTrace must equal (actualTrace)
       }
     }
 
-    "convert TraceSummary" in {
+    "convert TraceSummary" when {
       "to thrift and back" in {
         val expectedTraceSummary = TraceSummary(123, 10000, 10300, 300, Map("service1" -> 1),
           List(Endpoint(123, 123, "service1")))
         val thriftTraceSummary = expectedTraceSummary.toThrift
         val actualTraceSummary = thriftTraceSummary.toTraceSummary
-        expectedTraceSummary mustEqual actualTraceSummary
+        expectedTraceSummary must equal (actualTraceSummary)
       }
     }
   }

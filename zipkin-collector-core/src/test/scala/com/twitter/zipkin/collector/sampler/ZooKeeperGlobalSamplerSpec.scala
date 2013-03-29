@@ -19,53 +19,57 @@ package com.twitter.zipkin.collector.sampler
 
 import com.twitter.zipkin.config.sampler.AdjustableRateConfig
 import org.specs.mock.{ClassMocker, JMocker}
-import org.specs.Specification
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-class ZooKeeperGlobalSamplerSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class ZooKeeperGlobalSamplerSpec extends WordSpec {
   "Sample" should {
 
     "keep 10% of traces" in {
       val sampleRate = 0.1
       val zkConfig = mock[AdjustableRateConfig]
-      expect {
-        allowing(zkConfig).get willReturn sampleRate
-      }
+
+      when(zkConfig.get).thenReturn(sampleRate)
+
       val sampler = new ZooKeeperGlobalSampler(zkConfig)
 
-      sampler(Long.MinValue) mustEqual false
-      sampler(-1) mustEqual true
-      sampler(0) mustEqual true
-      sampler(1) mustEqual true
-      sampler(Long.MaxValue) mustEqual false
+      sampler(Long.MinValue) must equal (false)
+      sampler(-1) must equal (true)
+      sampler(0) must equal (true)
+      sampler(1) must equal (true)
+      sampler(Long.MaxValue) must equal (false)
     }
 
     "drop all traces" in {
       val zkConfig = mock[AdjustableRateConfig]
-      expect {
-        allowing(zkConfig).get willReturn 0
-      }
+      when(zkConfig.get).thenReturn(0)
+
       val sampler = new ZooKeeperGlobalSampler(zkConfig)
 
-      sampler(Long.MinValue) mustEqual false
+      sampler(Long.MinValue) must equal (false)
       sampler(Long.MinValue + 1)
       -5000 to 5000 foreach { i =>
-        sampler(i) mustEqual false
+        sampler(i) must equal (false)
       }
-      sampler(Long.MaxValue) mustEqual false
+      sampler(Long.MaxValue) must equal (false)
     }
 
     "keep all traces" in {
       val zkConfig = mock[AdjustableRateConfig]
-      expect {
-        allowing(zkConfig).get willReturn 1
-      }
+      when(zkConfig.get).thenReturn(1)
+
       val sampler = new ZooKeeperGlobalSampler(zkConfig)
 
-      sampler(Long.MinValue) mustEqual true
+      sampler(Long.MinValue) must equal (true)
       -5000 to 5000 foreach { i =>
-        sampler(i) mustEqual true
+        sampler(i) must equal (true)
       }
-      sampler(Long.MinValue) mustEqual true
+      sampler(Long.MinValue) must equal (true)
     }
 
   }

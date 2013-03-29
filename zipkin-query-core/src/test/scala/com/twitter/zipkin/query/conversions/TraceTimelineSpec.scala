@@ -18,11 +18,16 @@ package com.twitter.zipkin.query.conversions
 import com.twitter.zipkin.common._
 import com.twitter.zipkin.gen
 import com.twitter.zipkin.query.{Trace, TimelineAnnotation, TraceTimeline}
-import org.specs.Specification
-import org.specs.mock.{ClassMocker, JMocker}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
 import java.nio.ByteBuffer
 
-class TraceTimelineSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class TraceTimelineSpec extends WordSpec {
 
 
 //T = 0	 koalabird-cuckoo	 ValuesFromSource	 Server receive	 10.34.238.111 ():9149
@@ -103,12 +108,12 @@ class TraceTimelineSpec extends Specification with JMocker with ClassMocker {
   "TraceTimelineSpec" should {
     "convert to timeline with correct annotations ordering" in {
       val actualTimeline = TraceTimeline(trace)
-      Some(expectedTimeline) mustEqual actualTimeline
+      Some(expectedTimeline) must equal (actualTimeline)
     }
 
     "return none if empty trace" in {
       val actualTimeline = TraceTimeline(new Trace(List()))
-      None mustEqual actualTimeline
+      None must equal (actualTimeline)
     }
   }
 

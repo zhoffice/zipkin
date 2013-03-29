@@ -22,11 +22,17 @@ import com.twitter.zipkin.collector.sampler.adaptive.policy.LeaderPolicy
 import com.twitter.zipkin.config.sampler.adaptive.ZooKeeperAdaptiveSamplerConfig
 import com.twitter.zipkin.config.sampler.AdjustableRateConfig
 import org.apache.zookeeper.ZooKeeper
-import org.specs.mock.{ClassMocker, JMocker}
-import org.specs.Specification
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
+import org.mockito.Matchers.any
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 import scala.collection.JavaConverters._
 
-class ZooKeeperAdaptiveLeaderSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class ZooKeeperAdaptiveLeaderSpec extends WordSpec {
   val samplerTimer = mock[Timer]
 
   "ZooKeeperAdaptiveLeader" should {
@@ -66,30 +72,25 @@ class ZooKeeperAdaptiveLeaderSpec extends Specification with JMocker with ClassM
       val sum = 600.0
       val expectedUpdate = sum.toLong
 
-      expect {
-        1.of(_config).client willReturn _zkClient
-        1.of(_zkClient).get willReturn _zk
-        one(_reportGroup).getMemberIds willReturn ids.asJava
-        ids.foreach { id =>
-          one(_reportGroup).getMemberPath(id) willReturn (_reportPath + "/" + id)
-        }
-
-        one(_zk).getData(_reportPath + "/1", true, null) willReturn "100".getBytes
-        one(_zk).getData(_reportPath + "/2", true, null) willReturn "200".getBytes
-        one(_zk).getData(_reportPath + "/3", true, null) willReturn "300".getBytes
-
-        one(_buf).update(expectedUpdate)
+      when(_config.client).thenReturn(_zkClient)
+      when(_zkClient.get).thenReturn(_zk)
+      when(_reportGroup.getMemberIds).thenReturn(ids.asJava)
+      ids.foreach { id =>
+        when(_reportGroup.getMemberPath(id)).thenReturn((_reportPath + "/" + id))
       }
 
+      when(_zk.getData(_reportPath + "/1", true, null)).thenReturn("100".getBytes)
+      when(_zk.getData(_reportPath + "/2", true, null)).thenReturn("200".getBytes)
+      when(_zk.getData(_reportPath + "/3", true, null)).thenReturn("300".getBytes)
+
       leader.update()
+      verify(_buf, times(1)).update(expectedUpdate)
     }
 
     "do nothing if policy returns None" in {
       val leader = adaptiveLeader
 
-      expect {
-        1.of(_leaderPolicy).apply(Some(_buf)) willReturn None
-      }
+      when(_leaderPolicy.apply(Some(_buf))).thenReturn(None)
 
       leader.lead()
     }
@@ -98,22 +99,19 @@ class ZooKeeperAdaptiveLeaderSpec extends Specification with JMocker with ClassM
       val leader = adaptiveLeader
       val newSampleRate = 0.1
 
-      expect {
-        1.of(_config).sampleRate willReturn _sampleRateConfig
-        1.of(_leaderPolicy).apply(Some(_buf)) willReturn Some(newSampleRate)
-        1.of(_sampleRateConfig).set(newSampleRate)
-        1.of(_leaderPolicy).notifyChange(newSampleRate)
-      }
-
+      when(_config.sampleRate).thenReturn(_sampleRateConfig)
+      when(_leaderPolicy.apply(Some(_buf))).thenReturn(Some(newSampleRate))
       leader.lead()
+      verify(_sampleRateConfig, times(1)).set(newSampleRate)
+      verify(_leaderPolicy, times(1)).notifyChange(newSampleRate)
     }
 
     "truncate" in {
-      ZooKeeperAdaptiveLeader.truncate(0.1110) mustEqual 0.111
-      ZooKeeperAdaptiveLeader.truncate(0.1111) mustEqual 0.111
-      ZooKeeperAdaptiveLeader.truncate(0.1115) mustEqual 0.111
-      ZooKeeperAdaptiveLeader.truncate(0.1119) mustEqual 0.111
-      ZooKeeperAdaptiveLeader.truncate(0.1120) mustEqual 0.112
+      ZooKeeperAdaptiveLeader.truncate(0.1110) must equal (0.111)
+      ZooKeeperAdaptiveLeader.truncate(0.1111) must equal (0.111)
+      ZooKeeperAdaptiveLeader.truncate(0.1115) must equal (0.111)
+      ZooKeeperAdaptiveLeader.truncate(0.1119) must equal (0.111)
+      ZooKeeperAdaptiveLeader.truncate(0.1120) must equal (0.112)
     }
   }
 }

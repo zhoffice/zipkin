@@ -18,8 +18,10 @@ package com.twitter.zipkin
 
 import collector.ZipkinCollector
 import gen.LogEntry
-import org.specs.Specification
-import org.specs.mock.{ClassMocker, JMocker}
+import org.scalatest.{WordSpec, BeforeAndAfter}
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
 import com.twitter.finagle.builder.ClientBuilder
 import org.apache.thrift.protocol.TBinaryProtocol
 import com.twitter.cassie.tests.util.FakeCassandra
@@ -28,8 +30,11 @@ import java.net.{InetSocketAddress, InetAddress}
 import com.twitter.finagle.Service
 import com.twitter.finagle.thrift.{ThriftClientRequest, ThriftClientFramedCodec}
 import com.twitter.ostrich.admin.RuntimeEnvironment
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-class ZipkinSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class ZipkinSpec extends WordSpec with BeforeAndAfter {
 
   object FakeServer extends FakeCassandra
 
@@ -41,7 +46,7 @@ class ZipkinSpec extends Specification with JMocker with ClassMocker {
   val mockRuntimeEnv = mock[RuntimeEnvironment]
 
   "ZipkinCollector and ZipkinQuery" should {
-    doBefore {
+    before {
       // fake cassandra node
       FakeServer.start()
 
@@ -75,7 +80,7 @@ class ZipkinSpec extends Specification with JMocker with ClassMocker {
         .build()
     }
 
-    doAfter {
+    after {
       collectorTransport.release()
       collector.shutdown()
       queryTransport.release()
@@ -102,12 +107,12 @@ class ZipkinSpec extends Specification with JMocker with ClassMocker {
       val traces = queryClient.getTracesByIds(Seq(123), Seq())()
       val existSet = queryClient.tracesExist(Seq(123, 5))()
 
-      traces.isEmpty mustEqual false
-      traces(0).spans.isEmpty mustEqual false
-      traces(0).spans(0).traceId mustEqual 123
+      traces.isEmpty must equal (false)
+      traces(0).spans.isEmpty must equal (false)
+      traces(0).spans(0).traceId must equal (123)
 
-      existSet.contains(123) mustEqual true
-      existSet.contains(5) mustEqual false
+      existSet.contains(123) must equal (true)
+      existSet.contains(5) must equal (false)
     }
 
   }

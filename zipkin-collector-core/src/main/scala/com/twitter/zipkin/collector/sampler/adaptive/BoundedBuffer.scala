@@ -64,6 +64,6 @@ class SlidingWindowCounter(counter: Counter, length: Int)
   }
 
   def apply() = buf.synchronized {
-    buf.head - buf.last
+    if (buf.isEmpty) 0 else buf.head - buf.last
   }
 }

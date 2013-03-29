@@ -19,11 +19,15 @@ import com.twitter.conversions.time._
 import com.twitter.zipkin.config.sampler.adaptive.ZooKeeperAdaptiveSamplerConfig
 import com.twitter.zipkin.config.sampler.AdjustableRateConfig
 import com.twitter.zipkin.collector.sampler.adaptive.BoundedBuffer
-import org.specs.Specification
-import org.specs.mock.{JMocker, ClassMocker}
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 import com.twitter.util.{MockTimer, Time}
 
-class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
+class PolicyFilterSpec extends WordSpec {
 
   val _config = mock[ZooKeeperAdaptiveSamplerConfig]
   val _storageRequestRate = mock[AdjustableRateConfig]
@@ -38,13 +42,13 @@ class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
 
         val composed = filter1 andThen filter2
 
-        composed(buf) mustEqual None      // No values => fail
+        composed(buf) must equal (None)      // No values => fail
         buf.update(1)
-        composed(buf) mustEqual None      // valid value, not sufficient => fail
+        composed(buf) must equal (None)      // valid value, not sufficient => fail
         buf.update(-1)
-        composed(buf) mustEqual None     // invalid value, sufficient => fail
+        composed(buf) must equal (None)     // invalid value, sufficient => fail
         buf.update(1)
-        composed(buf) mustEqual Some(buf) // valid value, sufficient => pass
+        composed(buf) must equal (Some(buf)) // valid value, sufficient => pass
       }
     }
 
@@ -81,7 +85,7 @@ class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
         1.of(_storageRequestRate).get willReturn -1
       }
 
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
     }
 
     "fail if storage request rate is zero" in {
@@ -90,7 +94,7 @@ class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
         1.of(_storageRequestRate).get willReturn 0
       }
 
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
     }
 
     "pass if storage request rate is positive" in {
@@ -99,7 +103,7 @@ class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
         1.of(_storageRequestRate).get willReturn 1
       }
 
-      filter(buf) mustEqual Some(buf)
+      filter(buf) must equal (Some(buf))
     }
   }
 
@@ -109,19 +113,19 @@ class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
     "fail if latest value is negative" in {
       val buf = new BoundedBuffer { val maxLength = 5 }
       buf.update(-1)
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
     }
 
     "fail if latest value is zero" in {
       val buf = new BoundedBuffer { val maxLength = 5 }
       buf.update(0)
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
     }
 
     "pass if latest value is positive" in {
       val buf = new BoundedBuffer { val maxLength = 5 }
       buf.update(1)
-      filter(buf) mustEqual Some(buf)
+      filter(buf) must equal (Some(buf))
     }
   }
 
@@ -129,11 +133,11 @@ class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
     val filter = new SufficientDataFilter(dataSufficient = 1.minute, pollInterval = 30.seconds)
     "pass if has enough data" in {
       val buf = new BoundedBuffer { val maxLength = 5 }
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
       buf.update(1.0)
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
       buf.update(2.0)
-      filter(buf) mustEqual Some(buf)
+      filter(buf) must equal (Some(buf))
     }
   }
 
@@ -148,11 +152,11 @@ class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
         atLeast(1).of(_storageRequestRate).get willReturn target
       }
 
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
       buf.update(1.0)
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
       buf.update(1.0)
-      filter(buf) mustEqual Some(buf)
+      filter(buf) must equal (Some(buf))
     }
   }
 
@@ -162,14 +166,14 @@ class PolicyFilterSpec extends Specification with JMocker with ClassMocker {
       val filter = new CooldownFilter(1.minute, timer)
       val buf = new BoundedBuffer { val maxLength = 5 }
 
-      filter(buf) mustEqual Some(buf)
+      filter(buf) must equal (Some(buf))
 
       filter.notifyChange(0.2)
-      filter(buf) mustEqual None
+      filter(buf) must equal (None)
 
       tc.advance(61.seconds)
       timer.tick()
-      filter(buf) mustEqual Some(buf)
+      filter(buf) must equal (Some(buf))
     }
   }
 }

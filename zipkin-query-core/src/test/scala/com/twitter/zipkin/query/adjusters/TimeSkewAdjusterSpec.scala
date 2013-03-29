@@ -16,14 +16,17 @@ package com.twitter.zipkin.query.adjusters
  *  limitations under the License.
  *
  */
-import org.specs.Specification
-import org.specs.mock.{ClassMocker, JMocker}
-import scala.collection._
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.junit.JUnitRunner
+
 import com.twitter.zipkin.gen
 import com.twitter.zipkin.common.{BinaryAnnotation, Endpoint, Annotation, Span}
 import com.twitter.zipkin.query.Trace
+import org.junit.runner.RunWith
 
-class TimeSkewAdjusterSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class TimeSkewAdjusterSpec extends WordSpec {
   val endpoint1 = Some(Endpoint(123, 123, "service"))
   val endpoint2 = Some(Endpoint(321, 321, "service"))
   val endpoint3 = Some(Endpoint(456, 456, "service"))
@@ -144,107 +147,108 @@ class TimeSkewAdjusterSpec extends Specification with JMocker with ClassMocker {
   "TimeSkewAdjuster" should {
     "adjust span time from machine with incorrect clock" in {
       val actualTrace = adjuster.adjust(inputTrace)
-      expectedTrace mustEqual actualTrace
+      expectedTrace must equal (actualTrace)
     }
-
+    
+  
     "not adjust when there is no clock skew" in {
       val actualTrace = adjuster.adjust(expectedTrace)
-      expectedTrace mustEqual actualTrace
+      expectedTrace must equal (actualTrace)
     }
-
+  
     // this happens if the server in an rpc is not trace enabled
     "not adjust when there is no server spans" in {
       val actualTrace = adjuster.adjust(incompleteTrace)
-      incompleteTrace mustEqual actualTrace
+      incompleteTrace must equal (actualTrace)
     }
-
+  
     "not adjust when core annotations are fine" in {
       val epTfe = Some(Endpoint(123, 123, "tfe"))
       val epMonorail = Some(Endpoint(456, 456, "monorail"))
-
+  
       val unicornCs  = Annotation(1L, gen.Constants.CLIENT_SEND, epTfe)
       val monorailSr = Annotation(2L, gen.Constants.SERVER_RECV, epMonorail)
       val monorailSs = Annotation(3L, gen.Constants.SERVER_SEND, epMonorail)
       val unicornCr  = Annotation(4L, gen.Constants.CLIENT_RECV, epTfe)
       val goodSpan = Span(1, "friendships/create", 12345L, None, List(unicornCs, monorailSr, monorailSs, unicornCr), Nil)
       val goodTrace = new Trace(Seq(goodSpan))
-
+  
       val actualTrace = adjuster.adjust(goodTrace)
-      goodTrace mustEqual actualTrace
+      goodTrace must equal (actualTrace)
     }
-
+  
     "adjust live case" in {
       val epTfe = Some(Endpoint(123, 123, "tfe"))
       val epMonorail = Some(Endpoint(456, 456, "monorail"))
-
+  
       val rootSr     = Annotation(1330539326400951L, gen.Constants.SERVER_RECV, epTfe)
       val rootSs     = Annotation(1330539327264251L, gen.Constants.SERVER_SEND, epTfe)
       val spanTfe    = Span(1, "POST", 7264365917420400007L, None, List(rootSr, rootSs), Nil)
-
+  
       val unicornCs  = Annotation(1330539326401999L, gen.Constants.CLIENT_SEND, epTfe)
       val monorailSr = Annotation(1330539325900366L, gen.Constants.SERVER_RECV, epMonorail)
       val monorailSs = Annotation(1330539326524407L, gen.Constants.SERVER_SEND, epMonorail)
       val unicornCr  = Annotation(1330539327263984L, gen.Constants.CLIENT_RECV, epTfe)
       val spanMonorailUnicorn = Span(1, "friendships/create", 6379677665629798877L, Some(7264365917420400007L), List(unicornCs, monorailSr, monorailSs, unicornCr), Nil)
-
+  
       val adjustedMonorailSr = Annotation(1330539326520971L, gen.Constants.SERVER_RECV, epMonorail)
       val adjustedMonorailSs = Annotation(1330539327145012L, gen.Constants.SERVER_SEND, epMonorail)
       val spanAdjustedMonorail = Span(1, "friendships/create", 6379677665629798877L, Some(7264365917420400007L), List(unicornCs, adjustedMonorailSr, adjustedMonorailSs, unicornCr), Nil)
-
+  
       val realTrace = new Trace(Seq(spanTfe, spanMonorailUnicorn))
       val expectedAdjustedTrace = new Trace(Seq(spanTfe, spanAdjustedMonorail))
-
+  
       val adjusted = adjuster.adjust(realTrace)
-
+  
       val adjustedSpans = adjusted.spans
       val expectedSpans = expectedAdjustedTrace.spans
-
-      adjustedSpans.length mustEqual expectedSpans.length
-      adjustedSpans.intersect(expectedSpans).length mustEqual adjustedSpans.length
+  
+      adjustedSpans.length must equal (expectedSpans.length)
+      adjustedSpans.intersect(expectedSpans).length must equal (adjustedSpans.length)
     }
-
+  
     "adjust trace with depth 3" in {
       val epTfe         = Some(Endpoint(123, 123, "tfe"))
       val epPassbird    = Some(Endpoint(456, 456, "passbird"))
       val epGizmoduck   = Some(Endpoint(789, 789, "gizmoduck"))
-
+  
       val tfeSr         = Annotation(1330647964054410L, gen.Constants.SERVER_RECV, epTfe)
       val tfeSs         = Annotation(1330647964057394L, gen.Constants.SERVER_SEND, epTfe)
       val spanTfe       = Span(1, "GET", 583798990668970003L, None, List(tfeSr, tfeSs), Nil)
-
+  
       val tfeCs         = Annotation(1330647964054881L, gen.Constants.CLIENT_SEND, epTfe)
       val passbirdSr    = Annotation(1330647964055250L, gen.Constants.SERVER_RECV, epPassbird)
       val passbirdSs    = Annotation(1330647964057394L, gen.Constants.SERVER_SEND, epPassbird)
       val tfeCr         = Annotation(1330647964057764L, gen.Constants.CLIENT_RECV, epTfe)
       val spanPassbird  = Span(1, "get_user_by_auth_token", 7625434200987291951L, Some(583798990668970003L), List(tfeCs, passbirdSr, passbirdSs, tfeCr), Nil)
-
+  
       // Gizmoduck server entries are missing
       val passbirdCs    = Annotation(1330647964055324L, gen.Constants.CLIENT_SEND, epPassbird)
       val passbirdCr    = Annotation(1330647964057127L, gen.Constants.CLIENT_RECV, epPassbird)
       val spanGizmoduck = Span(1, "get_by_auth_token", 119310086840195752L, Some(7625434200987291951L), List(passbirdCs, passbirdCr), Nil)
-
+  
       val gizmoduckCs   = Annotation(1330647963542175L, gen.Constants.CLIENT_SEND, epGizmoduck)
       val gizmoduckCr   = Annotation(1330647963542565L, gen.Constants.CLIENT_RECV, epGizmoduck)
       val spanMemcache  = Span(1, "Get", 3983355768376203472L, Some(119310086840195752L), List(gizmoduckCs, gizmoduckCr), Nil)
-
+  
       // Adjusted/created annotations
       val createdGizmoduckSr   = Annotation(1330647964055324L, gen.Constants.SERVER_RECV, epGizmoduck)
       val createdGizmoduckSs   = Annotation(1330647964057127L, gen.Constants.SERVER_SEND, epGizmoduck)
       val adjustedGizmoduckCs  = Annotation(1330647964056030L, gen.Constants.CLIENT_SEND, epGizmoduck)
       val adjustedGizmoduckCr = Annotation(1330647964056420L, gen.Constants.CLIENT_RECV, epGizmoduck)
-
+  
       val spanAdjustedGizmoduck = Span(1, "get_by_auth_token", 119310086840195752L, Some(7625434200987291951L), List(passbirdCs, passbirdCr, createdGizmoduckSr, createdGizmoduckSs), Nil)
       val spanAdjustedMemcache = Span(1, "Get", 3983355768376203472L, Some(119310086840195752L), List(adjustedGizmoduckCs, adjustedGizmoduckCr), Nil)
-
+  
       val realTrace = new Trace(Seq(spanTfe, spanPassbird, spanGizmoduck, spanMemcache))
       val adjustedTrace = new Trace(Seq(spanTfe, spanPassbird, spanAdjustedGizmoduck, spanAdjustedMemcache))
-
-      adjuster.adjust(realTrace) mustEqual adjustedTrace
+  
+      adjuster.adjust(realTrace) must equal (adjustedTrace)
     }
-
+  
     val ep1 = Some(Endpoint(1, 1, "ep1"))
     val ep2 = Some(Endpoint(2, 2, "ep2"))
-
+  
     "not adjust trace if invalid span" in {
       val cs    = Annotation(1L, gen.Constants.CLIENT_SEND, ep1)
       val sr = Annotation(10L, gen.Constants.SERVER_RECV, ep2)
@@ -253,100 +257,99 @@ class TimeSkewAdjusterSpec extends Specification with JMocker with ClassMocker {
       val cr2    = Annotation(5L, gen.Constants.CLIENT_RECV, ep1)
       val spanBad   = Span(1, "method", 123L, None, List(cs, sr, ss, cr, cr2), Nil)
       val spanGood   = Span(1, "method", 123L, None, List(cs, sr, ss, cr), Nil)
-
+  
       val trace1 = new Trace(Seq(spanGood))
-      adjuster.adjust(trace1) mustNotEq trace1
-
+      adjuster.adjust(trace1) must not equal trace1
+  
       val trace2 = new Trace(Seq(spanBad))
-      adjuster.adjust(trace2) mustNotEq trace2
-
+      adjuster.adjust(trace2) must not equal trace2
     }
-
+  
     "not adjust trace if child longer than parent" in {
       val cs = Annotation(1L, gen.Constants.CLIENT_SEND, ep1)
       val sr = Annotation(2L, gen.Constants.SERVER_RECV, ep2)
       val ss = Annotation(11L, gen.Constants.SERVER_SEND, ep2)
       val cr = Annotation(4L, gen.Constants.CLIENT_RECV, ep1)
-
+  
       val span = Span(1, "method", 123L, None, List(cs, sr, ss, cr), Nil)
-
+  
       val trace1 = new Trace(Seq(span))
-      adjuster.adjust(trace1) mustEqual trace1
+      adjuster.adjust(trace1) must equal (trace1)
     }
-
+  
     "adjust even if we only have client send" in {
       val tfeService = Endpoint(123, 9455, "api.twitter.com-ssl")
-
+  
       val tfe = Span(142224153997690008L, "GET", 142224153997690008L, None, List(
         Annotation(60498165L, gen.Constants.SERVER_RECV, Some(tfeService)),
         Annotation(61031100L, gen.Constants.SERVER_SEND, Some(tfeService))
       ), Nil)
-
+  
       val monorailService = Endpoint(456, 8000, "monorail")
       val clusterTwitterweb = Endpoint(123, -13145, "cluster_twitterweb_unicorn")
-
+  
       val monorail = Span(142224153997690008L, "following/index", 7899774722699781565L, Some(142224153997690008L), List(
         Annotation(59501663L, gen.Constants.SERVER_RECV, Some(monorailService)),
         Annotation(59934508L, gen.Constants.SERVER_SEND, Some(monorailService)),
         Annotation(60499730L, gen.Constants.CLIENT_SEND, Some(clusterTwitterweb)),
         Annotation(61030844L, gen.Constants.CLIENT_RECV, Some(clusterTwitterweb))
       ), Nil)
-
+  
       val tflockService = Endpoint(456, -14238, "tflock")
       val flockdbEdgesService = Endpoint(789, 6915, "flockdb_edges")
-
+  
       val tflock = Span(142224153997690008L, "select", 6924056367845423617L, Some(7899774722699781565L), List(
         Annotation(59541848L, gen.Constants.CLIENT_SEND, Some(tflockService)),
         Annotation(59544889L, gen.Constants.CLIENT_RECV, Some(tflockService)),
         Annotation(59541031L, gen.Constants.SERVER_RECV, Some(flockdbEdgesService)),
         Annotation(59542894L, gen.Constants.SERVER_SEND, Some(flockdbEdgesService))
       ), Nil)
-
+  
       val flockService = Endpoint(2130706433, 0, "flock")
-
+  
       val flock = Span(142224153997690008L, "select", 7330066031642813936L, Some(6924056367845423617L), List(
         Annotation(59541299L, gen.Constants.CLIENT_SEND, Some(flockService)),
         Annotation(59542778L, gen.Constants.CLIENT_RECV, Some(flockService))
       ), Nil)
-
+  
       val trace = new Trace(Seq(monorail, tflock, tfe, flock))
       val adjusted = adjuster.adjust(trace)
-
+  
       // let's see how we did
       val adjustedFlock = adjusted.getSpanById(7330066031642813936L).get
       val adjustedFlockspan = adjusted.getSpanById(6924056367845423617L).get
       val flockCs = adjustedFlock.getAnnotation(gen.Constants.CLIENT_SEND).get
       val tflockSr = adjustedFlockspan.getAnnotation(gen.Constants.SERVER_RECV).get
-
-      // tflock must receive the request before it send a request to flock
-      flockCs.timestamp must be_>(tflockSr.timestamp)
+  
+        // tflock must receive the request before it send a request to flock
+       flockCs.timestamp must be > tflockSr.timestamp
     }
-
+  
     "adjust child spans that are way in the future" in {
       val adserver = Endpoint(170086792, -27267, "adserver")
       val admixer = Endpoint(170136166, 5432, "admixer_service")
       val flock_service = Endpoint(170136166, -10318, "flock_service")
       val flock = Endpoint(2130706433, 0, "flock")
-
+  
       // Taken from a real-world example
       val adspan = Span(134823740742430001L, "makeAdRequest", -3640919371647321562L, Some(-118196381023806589L), List(
         Annotation(1363721314362000L, gen.Constants.CLIENT_RECV, Some(adserver)),
         Annotation(1363721314323000L, gen.Constants.CLIENT_SEND, Some(adserver)),
         Annotation(1363721314361000L, gen.Constants.SERVER_SEND, Some(admixer)),
         Annotation(1363721314323000L, gen.Constants.SERVER_RECV, Some(admixer))), Nil)
-
+  
       val flockspan = Span(134823740742430001L, "select2", -6621578840377806836L, Some(-3640919371647321562L), List(
         //                v---- 5 min later?  huh.  wtf?
         Annotation(1363721614328000L, gen.Constants.CLIENT_RECV, Some(flock_service)),
         Annotation(1363721614325000L, gen.Constants.CLIENT_SEND, Some(flock_service))), Nil)
-
+  
       val flockspan2 = Span(134823740742430001L, "select", -246027964864704468L, Some(-6621578840377806836L), List(
         Annotation(1363721614326000L, gen.Constants.CLIENT_RECV, Some(flock)),
         Annotation(1363721614325000L, gen.Constants.CLIENT_SEND, Some(flock))), Nil)
-
+  
       val trace = new Trace(Seq(adspan, flockspan, flockspan2))
       val adjusted = adjuster.adjust(trace)
-
+  
       // let's see how we did
       val adjustedAdspan = adjusted.getSpanById(-3640919371647321562L).get
       val adjustedFlockspan = adjusted.getSpanById(-6621578840377806836L).get
@@ -356,12 +359,12 @@ class TimeSkewAdjusterSpec extends Specification with JMocker with ClassMocker {
       val fCs  = adjustedFlockspan.getAnnotation(gen.Constants.CLIENT_SEND).get
       val f2Cr  = adjustedFlockspan2.getAnnotation(gen.Constants.CLIENT_RECV).get
       val f2Cs  = adjustedFlockspan2.getAnnotation(gen.Constants.CLIENT_SEND).get
-
-      // shift evertyhing back
-      adCr.timestamp must beGreaterThanOrEqualTo(fCr.timestamp)
-      adCr.timestamp must beGreaterThanOrEqualTo(fCs.timestamp)
-      adCr.timestamp must beGreaterThanOrEqualTo(f2Cr.timestamp)
-      adCr.timestamp must beGreaterThanOrEqualTo(f2Cs.timestamp)
+  
+        // shift evertyhing back
+      adCr.timestamp must be >=(fCr.timestamp)
+      adCr.timestamp must be >=(fCs.timestamp)
+      adCr.timestamp must be >=(f2Cr.timestamp)
+      adCr.timestamp must be >=(f2Cs.timestamp)
     }
   }
 }

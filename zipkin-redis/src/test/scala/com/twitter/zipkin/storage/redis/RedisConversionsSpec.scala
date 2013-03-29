@@ -17,10 +17,10 @@
 package com.twitter.zipkin.storage.redis
 
 import com.twitter.zipkin.common.Span
-import org.specs.Specification
+import org.specs.SpecificationWithJUnit
 import scala.util.Random
 
-class RedisConversionsSpec extends Specification {
+class RedisConversionsSpec extends SpecificationWithJUnit {
   "RedisConversions" should {
     val rand = new Random
 

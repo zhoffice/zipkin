@@ -18,9 +18,15 @@ package com.twitter.zipkin.collector.filter
 
 import com.twitter.zipkin.common.{Endpoint, Annotation, Span}
 import com.twitter.zipkin.gen
-import org.specs.Specification
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-class ClientIndexFilterSpec extends Specification {
+@RunWith(classOf[JUnitRunner])
+class ClientIndexFilterSpec extends WordSpec {
 
   val filter = new ClientIndexFilter
 
@@ -28,25 +34,25 @@ class ClientIndexFilterSpec extends Specification {
     "not index span" in {
       // server side, with default name
       val spanCs = Span(1, "n", 2, None, List(Annotation(1, gen.Constants.CLIENT_SEND, Some(Endpoint(1,1,"client")))), Nil)
-      filter.shouldIndex(spanCs) mustEqual false
+      filter.shouldIndex(spanCs) must equal (false)
       val spanCr = Span(1, "n", 2, None, List(Annotation(1, gen.Constants.CLIENT_RECV, Some(Endpoint(1,1,"client")))), Nil)
-      filter.shouldIndex(spanCr) mustEqual false
+      filter.shouldIndex(spanCr) must equal (false)
     }
 
     "index span" in {
       // server side, so index
       val spanSr = Span(1, "n", 2, None, List(Annotation(1, gen.Constants.SERVER_RECV, Some(Endpoint(1,1,"s")))), Nil)
-      filter.shouldIndex(spanSr) mustEqual true
+      filter.shouldIndex(spanSr) must equal (true)
       val spanSs = Span(1, "n", 2, None, List(Annotation(1, gen.Constants.SERVER_SEND, Some(Endpoint(1,1,"s")))), Nil)
-      filter.shouldIndex(spanSs) mustEqual true
+      filter.shouldIndex(spanSs) must equal (true)
       // client side, but not with default name
       val spanCs = Span(1, "n", 2, None, List(Annotation(1, gen.Constants.CLIENT_SEND, Some(Endpoint(1,1,"s")))), Nil)
-      filter.shouldIndex(spanCs) mustEqual true
+      filter.shouldIndex(spanCs) must equal (true)
       val spanCr = Span(1, "n", 2, None, List(Annotation(1, gen.Constants.CLIENT_RECV, Some(Endpoint(1,1,"s")))), Nil)
-      filter.shouldIndex(spanCr) mustEqual true
+      filter.shouldIndex(spanCr) must equal (true)
       // the unusual case of having a server with the name "client"
       val spanClientServer = Span(1, "n", 2, None, List(Annotation(1, gen.Constants.SERVER_SEND, Some(Endpoint(1,1,"client")))), Nil)
-      filter.shouldIndex(spanClientServer) mustEqual true
+      filter.shouldIndex(spanClientServer) must equal (true)
     }
   }
 }

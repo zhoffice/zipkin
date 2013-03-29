@@ -17,10 +17,16 @@
 package com.twitter.zipkin.collector.processor
 
 import com.twitter.finagle.Service
-import org.specs.Specification
-import org.specs.mock.{JMocker, ClassMocker}
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import com.twitter.util.Future
 
-class FanoutServiceSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class FanoutServiceSpec extends WordSpec {
   "FanoutService" should {
     "fanout" in {
       val serv1 = mock[Service[Int, Unit]]
@@ -29,12 +35,12 @@ class FanoutServiceSpec extends Specification with JMocker with ClassMocker {
       val fanout = new FanoutService[Int](Seq(serv1, serv2))
       val item = 1
 
-      expect {
-        one(serv1).apply(item)
-        one(serv2).apply(item)
-      }
+      when(serv1.apply(item)).thenReturn(Future.Unit)
+      when(serv2.apply(item)).thenReturn(Future.Unit)
 
       fanout.apply(item)
+      verify(serv1, times(1)).apply(item)
+      verify(serv2, times(1)).apply(item)
     }
   }
 }

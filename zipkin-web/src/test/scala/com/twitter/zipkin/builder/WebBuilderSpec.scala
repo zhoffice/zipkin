@@ -19,9 +19,14 @@ import com.twitter.io.TempFile
 import com.twitter.ostrich.admin.RuntimeEnvironment
 import com.twitter.util.Eval
 import com.twitter.zipkin.web.ZipkinWeb
-import org.specs.Specification
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
 
-class WebBuilderSpec extends Specification {
+class WebBuilderSpec extends WordSpec {
   "web builders" should {
     val eval = new Eval
 

@@ -20,13 +20,19 @@ import com.twitter.ostrich.admin.RuntimeEnvironment
 import com.twitter.util.Eval
 import com.twitter.zipkin.builder.Builder
 import com.twitter.zipkin.query.ZipkinQuery
-import org.specs.Specification
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
 
-class ConfigSpec extends Specification {
+@RunWith(classOf[JUnitRunner])
+class ConfigSpec extends WordSpec {
   "/config" should {
     val eval = new Eval
 
-    "validate query configs" in {
+    "validate query configs" when {
       val queryConfigFiles = Seq(
         "/query-dev.scala"
       ) map { TempFile.fromResourcePath(_) }
@@ -34,7 +40,7 @@ class ConfigSpec extends Specification {
       for (file <- queryConfigFiles) {
         file.getName() in {
           val config = eval[Builder[RuntimeEnvironment => ZipkinQuery]](file)
-          config must notBeNull
+          config must not be null
           config.apply()
         }
       }

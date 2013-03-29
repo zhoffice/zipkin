@@ -16,11 +16,16 @@
 package com.twitter.zipkin.storage
 
 import com.twitter.zipkin.query.{QueryService, adjusters}
-import org.specs.Specification
-import org.specs.mock.{ClassMocker, JMocker}
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
 import com.twitter.util.Future
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-class TraceIdsToDurationSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class TraceIdsToDurationSpec extends WordSpec {
 
   "TraceIdsToDuration" should {
 
@@ -30,10 +35,8 @@ class TraceIdsToDurationSpec extends Specification with JMocker with ClassMocker
       val duration2 = TraceIdDuration(2L, 200L, 600L)
       val duration3 = TraceIdDuration(3L, 300L, 700L)
 
-      expect {
-        1.of(index).getTracesDuration(List(1L, 2L)) willReturn Future(List(duration1, duration2))
-        1.of(index).getTracesDuration(List(3L)) willReturn Future(List(duration3))
-      }
+      when(index.getTracesDuration(List(1L, 2L))).thenReturn(Future(List(duration1, duration2)))
+      when(index.getTracesDuration(List(3L))).thenReturn(Future(List(duration3)))
 
       val td = new TraceIdsToDuration(index, 2)
       td.append(1)
@@ -41,9 +44,9 @@ class TraceIdsToDurationSpec extends Specification with JMocker with ClassMocker
       td.append(3)
 
       val durations = td.getDurations()()
-      durations(0) mustEqual duration1
-      durations(1) mustEqual duration2
-      durations(2) mustEqual duration3
+      durations(0) must equal (duration1)
+      durations(1) must equal (duration2)
+      durations(2) must equal (duration3)
     }
   }
 }

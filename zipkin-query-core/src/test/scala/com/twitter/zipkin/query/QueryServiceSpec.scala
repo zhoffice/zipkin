@@ -23,10 +23,15 @@ import com.twitter.zipkin.gen
 import com.twitter.zipkin.query.adjusters.{TimeSkewAdjuster, NullAdjuster}
 import com.twitter.zipkin.storage._
 import java.nio.ByteBuffer
-import org.specs.Specification
-import org.specs.mock.{ClassMocker, JMocker}
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-class QueryServiceSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class QueryServiceSpec extends WordSpec {
   val ep1 = Endpoint(123, 123, "service1")
   val ep2 = Endpoint(234, 234, "service2")
   val ep3 = Endpoint(345, 345, "service3")
@@ -64,19 +69,19 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
     "generate exception in getTraceIdsByName if service name is null" in {
       val qs = new QueryService(null, null, null, null)
       qs.start
-      qs.getTraceIdsBySpanName(null, "span", 101, 100, gen.Order.DurationDesc)() must throwA[gen.QueryException]
+      evaluating { qs.getTraceIdsBySpanName(null, "span", 101, 100, gen.Order.DurationDesc)() } must produce [gen.QueryException]
     }
 
     "throw exception in getTraceIdsByServiceName if service name is null" in {
       val qs = new QueryService(null, null, null, null)
       qs.start
-      qs.getTraceIdsByServiceName(null, 101, 100, gen.Order.DurationDesc)() must throwA[gen.QueryException]
+      evaluating { qs.getTraceIdsByServiceName(null, 101, 100, gen.Order.DurationDesc)() } must produce [gen.QueryException]
     }
 
     "throw exception in getTraceIdsByAnnotation if annotation is null" in {
       val qs = new QueryService(null, null, null, null)
       qs.start
-      qs.getTraceIdsByAnnotation(null, null, null, 101, 100, gen.Order.DurationDesc)() must throwA[gen.QueryException]
+      evaluating { qs.getTraceIdsByAnnotation(null, null, null, 101, 100, gen.Order.DurationDesc)() } must produce [gen.QueryException]
     }
 
     class MockIndex extends Index {
@@ -87,21 +92,21 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       def close() = null
       def getTraceIdsByName(serviceName: String, spanName: Option[String],
                             endTs: Long, limit: Int): Future[Seq[IndexedTraceId]] = {
-        serviceName mustEqual "service"
-        spanName mustEqual mockSpanName
-        endTs mustEqual 100L
+        serviceName must equal ("service")
+        spanName must equal (mockSpanName)
+        endTs must equal (100L)
         Future(ids)
       }
       def getTraceIdsByAnnotation(service: String, annotation: String, value: Option[ByteBuffer], endTs: Long,
                                   limit: Int): Future[Seq[IndexedTraceId]] = {
-        service mustEqual "service"
-        annotation mustEqual "annotation"
-        value mustEqual mockValue
-        endTs mustEqual 100L
+        service must equal ("service")
+        annotation must equal ("annotation")
+        value must equal (mockValue)
+        endTs must equal (100L)
         Future(ids)
       }
       def getTracesDuration(traceIds: Seq[Long]): Future[Seq[TraceIdDuration]] = {
-        traceIds mustEqual Seq(1, 2, 3)
+        traceIds must equal (Seq(1, 2, 3))
         Future(Seq(TraceIdDuration(1, 50, 100), TraceIdDuration(2, 401, 101),
           TraceIdDuration(3, 100, 99)))
       }
@@ -125,7 +130,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
 
       val actual = qs.getTraceIdsBySpanName("service", "methodcall", 100, 50,
         gen.Order.DurationDesc)()
-      actual mustEqual expected
+      actual must equal (expected)
     }
 
     "find traces in service span name index, order by duration desc" in {
@@ -138,7 +143,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val expected = List(2, 3, 1)
 
       val actual = qs.getTraceIdsBySpanName("service", "methodcall", 100, 50, gen.Order.DurationDesc)()
-      actual mustEqual expected
+      actual must equal (expected)
     }
 
     "find traces in service span name index, order by nothing" in {
@@ -151,7 +156,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val expected = List(1, 2, 3)
 
       val actual = qs.getTraceIdsBySpanName("service", "methodcall", 100, 50, gen.Order.None)()
-      actual mustEqual expected
+      actual must equal (expected)
     }
 
     "successfully return the trace summary for a trace id" in {
@@ -162,12 +167,12 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
 
       val traceId = 123L
 
-      expect {
-        one(storage).getSpansByTraceIds(List(traceId)) willReturn Future(List(spans1))
-      }
+      when(storage.getSpansByTraceIds(List(traceId))).thenReturn(Future(List(spans1)))
+      val result = qs.getTraceSummariesByIds(List(traceId), List())()
+      verify(storage, times(1)).getSpansByTraceIds(List(traceId))
 
       val ts = List(TraceSummary(1, 100, 150, 50, Map("service1" -> 1), List(ep1)).toThrift)
-      ts mustEqual qs.getTraceSummariesByIds(List(traceId), List())()
+      ts must equal (result)
     }
 
     "successfully return the trace combo for a trace id" in {
@@ -178,14 +183,15 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
 
       val traceId = 123L
 
-      expect {
-        one(storage).getSpansByTraceIds(List(traceId)) willReturn Future(List(spans1))
-      }
+      when(storage.getSpansByTraceIds(List(traceId))).thenReturn(Future(List(spans1)))
+
       val trace = trace1.toThrift
       val summary = TraceSummary(1, 100, 150, 50, Map("service1" -> 1), List(ep1)).toThrift
       val timeline = TraceTimeline(trace1) map { _.toThrift }
       val combo = gen.TraceCombo(trace, Some(summary), timeline, Some(Map(666L -> 1)))
-      Seq(combo) mustEqual qs.getTraceCombosByIds(List(traceId), List())()
+      val result = qs.getTraceCombosByIds(List(traceId), List())()
+      verify(storage, times(1)).getSpansByTraceIds(List(traceId))
+      Seq(combo) must equal (result)
     }
 
     "find traces in service name index, fetch from storage" in {
@@ -199,7 +205,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val expected = List(2, 3, 1)
 
       val actual = qs.getTraceIdsByServiceName("service", 100, 50, gen.Order.DurationDesc)()
-      expected mustEqual actual
+      expected must equal (actual)
     }
 
     "find traces in annotation index by timestamp annotation, fetch from storage" in {
@@ -210,8 +216,8 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
 
       val expected = List(2, 3, 1)
 
-      expected mustEqual qs.getTraceIdsByAnnotation("service", "annotation", null, 100, 50,
-        gen.Order.DurationDesc)()
+      expected must equal (qs.getTraceIdsByAnnotation("service", "annotation", null, 100, 50,
+        gen.Order.DurationDesc)())
     }
 
     "find traces in annotation index by kv annotation, fetch from storage" in {
@@ -226,7 +232,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val actual = qs.getTraceIdsByAnnotation("service", "annotation", ByteBuffer.wrap("value".getBytes),
         100, 50, gen.Order.DurationDesc)()
 
-      expected mustEqual actual
+      expected must equal (actual)
     }
 
     "fetch traces from storage" in {
@@ -235,13 +241,11 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val qs = new QueryService(storage, index, null, Map())
       qs.start()
 
-      expect {
-        1.of(storage).getSpansByTraceIds(List(1L)) willReturn Future(List(spans1))
-      }
+      when(storage.getSpansByTraceIds(List(1L))).thenReturn(Future(List(spans1)))
 
       val expected = List(trace1.toThrift)
       val actual = qs.getTracesByIds(List(1L), List())()
-      expected mustEqual actual
+      expected must equal (actual)
     }
 
     "fetch timeline from storage" in {
@@ -251,9 +255,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
         Map(gen.Adjust.Nothing -> NullAdjuster, gen.Adjust.TimeSkew -> new TimeSkewAdjuster()))
       qs.start()
 
-      expect {
-        1.of(storage).getSpansByTraceIds(List(1L)) willReturn Future(List(spans4))
-      }
+      when(storage.getSpansByTraceIds(List(1L))).thenReturn(Future(List(spans4)))
 
       val ann1 = gen.TimelineAnnotation(100, gen.Constants.CLIENT_SEND,
         ep1.toThrift, 666, None, "service1", "methodcall")
@@ -266,7 +268,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
 
       val expected = List(gen.TraceTimeline(1L, 666, List(ann1, ann3, ann4, ann2), List()))
       val actual = qs.getTraceTimelinesByIds(List(1L), List(gen.Adjust.Nothing, gen.Adjust.TimeSkew))()
-      expected mustEqual actual
+      expected must equal (actual)
     }
 
     "fetch timeline with clock skew from storage, fix skew" in {
@@ -299,12 +301,10 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val realSpans = List(rs1, rs2)
       val realTrace = Trace(realSpans)
 
-      expect {
-        1.of(storage).getSpansByTraceIds(List(4488677265848750007L)) willReturn Future(List(realSpans))
-      }
+      when(storage.getSpansByTraceIds(List(4488677265848750007L))).thenReturn(Future(List(realSpans)))
 
       val actual = qs.getTraceTimelinesByIds(List(4488677265848750007L), List(gen.Adjust.TimeSkew))()
-      actual.size mustEqual 1
+      actual.size must equal (1)
       val tla = actual(0).`annotations`
       /*
         we expect the following order of annotations back
@@ -318,18 +318,18 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       */
 
       // we ignore the timestamps for now, order is what we care about
-      tla(0).`value` mustEqual "cs"
-      tla(0).`host` mustEqual epKoalabirdT
-      tla(1).`value` mustEqual "sr"
-      tla(1).`host` mustEqual epCuckooT
-      tla(2).`value` mustEqual "cs"
-      tla(2).`host` mustEqual epCuckooCassieT
-      tla(3).`value` mustEqual "cr"
-      tla(3).`host` mustEqual epCuckooCassieT
-      tla(4).`value` mustEqual "ss"
-      tla(4).`host` mustEqual epCuckooT
-      tla(5).`value` mustEqual "cr"
-      tla(5).`host` mustEqual epKoalabirdT
+      tla(0).`value` must equal ("cs")
+      tla(0).`host` must equal (epKoalabirdT)
+      tla(1).`value` must equal ("sr")
+      tla(1).`host` must equal (epCuckooT)
+      tla(2).`value` must equal ("cs")
+      tla(2).`host` must equal (epCuckooCassieT)
+      tla(3).`value` must equal ("cr")
+      tla(3).`host` must equal (epCuckooCassieT)
+      tla(4).`value` must equal ("ss")
+      tla(4).`host` must equal (epCuckooT)
+      tla(5).`value` must equal ("cr")
+      tla(5).`host` must equal (epKoalabirdT)
     }
 
     "fetch timeline with clock skew from storage, fix skew - the sequel" in {
@@ -362,12 +362,10 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val realSpans = List(rs1, rs2)
       val realTrace = Trace(realSpans)
 
-      expect {
-        1.of(storage).getSpansByTraceIds(List(-6120267009876080004L)) willReturn Future(List(realSpans))
-      }
+      when(storage.getSpansByTraceIds(List(-6120267009876080004L))).thenReturn(Future(List(realSpans)))
 
       val actual = qs.getTraceTimelinesByIds(List(-6120267009876080004L), List(gen.Adjust.TimeSkew))()
-      actual.size mustEqual 1
+      actual.size must equal (1)
       val tla = actual(0).`annotations`
       /*
         we expect the following order of annotations back
@@ -392,18 +390,18 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       */
 
       // we ignore the timestamps for now, order is what we care about
-      tla(0).`value` mustEqual "cs"
-      tla(0).`host` mustEqual epKoalabirdT
-      tla(1).`value` mustEqual "sr"
-      tla(1).`host` mustEqual epCuckooT
-      tla(2).`value` mustEqual "cs"
-      tla(2).`host` mustEqual epCuckooCassieT
-      tla(3).`value` mustEqual "cr"
-      tla(3).`host` mustEqual epCuckooCassieT
-      tla(4).`value` mustEqual "ss"
-      tla(4).`host` mustEqual epCuckooT
-      tla(5).`value` mustEqual "cr"
-      tla(5).`host` mustEqual epKoalabirdT
+      tla(0).`value` must equal ("cs")
+      tla(0).`host` must equal (epKoalabirdT)
+      tla(1).`value` must equal ("sr")
+      tla(1).`host` must equal (epCuckooT)
+      tla(2).`value` must equal ("cs")
+      tla(2).`host` must equal (epCuckooCassieT)
+      tla(3).`value` must equal ("cr")
+      tla(3).`host` must equal (epCuckooCassieT)
+      tla(4).`value` must equal ("ss")
+      tla(4).`host` must equal (epCuckooT)
+      tla(5).`value` must equal ("cr")
+      tla(5).`host` must equal (epKoalabirdT)
     }
 
     "fail to find traces by name in index, return empty" in {
@@ -415,7 +413,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val qs = new QueryService(storage, index, null, Map())
       qs.start()
 
-      List() mustEqual qs.getTraceIdsBySpanName("service", "methodcall", 100, 50, gen.Order.DurationDesc)()
+      List() must equal (qs.getTraceIdsBySpanName("service", "methodcall", 100, 50, gen.Order.DurationDesc)())
     }
 
     "fail to find traces by annotation in index, return empty" in {
@@ -427,7 +425,7 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       val qs = new QueryService(storage, index, null, Map())
       qs.start()
 
-      List() mustEqual qs.getTraceIdsByAnnotation("service", "annotation", null, 100, 50, gen.Order.DurationDesc)()
+      List() must equal (qs.getTraceIdsByAnnotation("service", "annotation", null, 100, 50, gen.Order.DurationDesc)())
     }
 
     "return the correct ttl" in {
@@ -437,42 +435,36 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
       qs.start()
       val ttl = 123
 
-      expect {
-        one(storage).getDataTimeToLive willReturn ttl
-      }
+      when(storage.getDataTimeToLive).thenReturn(ttl)
 
-      ttl mustEqual qs.getDataTimeToLive()()
+      ttl must equal (qs.getDataTimeToLive()())
     }
 
-    "retrieve aggregates" in {
+    "retrieve aggregates" when {
       val aggregates = mock[Aggregates]
       val serviceName = "mockingbird"
       val annotations = Seq("a", "b", "c")
 
-      "retrieve top annotations" in {
+      "asked for top annotations" in {
         val qs = new QueryService(null, null, aggregates, Map())
         qs.start()
 
-        expect {
-          one(aggregates).getTopAnnotations(serviceName) willReturn Future.value(annotations)
-        }
+        when(aggregates.getTopAnnotations(serviceName)).thenReturn(Future.value(annotations))
 
-        qs.getTopAnnotations(serviceName)() mustEqual annotations
+        qs.getTopAnnotations(serviceName)() must equal (annotations)
       }
 
-      "retrieve top key value annotations" in {
+      "asked for top key value annotations" in {
         val qs = new QueryService(null, null, aggregates, Map())
         qs.start()
 
-        expect {
-          one(aggregates).getTopKeyValueAnnotations(serviceName) willReturn Future.value(annotations)
-        }
+        when(aggregates.getTopKeyValueAnnotations(serviceName)).thenReturn(Future.value(annotations))
 
-        qs.getTopKeyValueAnnotations(serviceName)() mustEqual annotations
+        qs.getTopKeyValueAnnotations(serviceName)() must equal (annotations)
       }
     }
 
-    "getTraceIds" in {
+    "getTraceIds" when {
       val mockIndex = mock[Index]
       val qs = new QueryService(null, mockIndex, null, null)
       qs.start()
@@ -489,36 +481,40 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
 
       def id(id: Long, time: Long) = IndexedTraceId(id, time)
 
-      "get intersection of different filters" in {
+      "different filters intersect" in {
         val request = gen.QueryRequest(serviceName, spanName, annotations, binaryAnnotations, endTs, limit, order)
 
-        expect {
-          one(mockIndex).getTraceIdsByName(serviceName, spanName, endTs, 1) willReturn Future(Seq(id(1, endTs)))
-          one(mockIndex).getTraceIdsByAnnotation(serviceName, "ann1", None, endTs, 1) willReturn Future(Seq(id(1, endTs)))
-          one(mockIndex).getTraceIdsByAnnotation(serviceName, "key", Some(ByteBuffer.wrap("value".getBytes)), endTs, 1) willReturn Future(Seq(id(1, endTs)))
+        when(mockIndex.getTraceIdsByName(serviceName, spanName, endTs, 1))
+          .thenReturn(Future(Seq(id(1, endTs))))
+        when(mockIndex.getTraceIdsByAnnotation(serviceName, "ann1", None, endTs, 1))
+          .thenReturn(Future(Seq(id(1, endTs))))
+        when(mockIndex.getTraceIdsByAnnotation(serviceName, "key", Some(ByteBuffer.wrap("value".getBytes)), endTs, 1))
+          .thenReturn(Future(Seq(id(1, endTs))))
 
-          one(mockIndex).getTraceIdsByName(serviceName, spanName, paddedTs, limit) willReturn Future(Seq(id(1, 1), id(2, 2), id(3, 3)))
-          one(mockIndex).getTraceIdsByAnnotation(serviceName, "ann1", None, paddedTs, limit) willReturn Future(Seq(id(4, 4), id(1, 5), id(3, 4)))
-          one(mockIndex).getTraceIdsByAnnotation(serviceName, "key", Some(ByteBuffer.wrap("value".getBytes)), paddedTs, limit) willReturn Future(Seq(id(2, 3), id(4, 9), id(1, 9)))
+        when(mockIndex.getTraceIdsByName(serviceName, spanName, paddedTs, limit))
+          .thenReturn(Future(Seq(id(1, 1), id(2, 2), id(3, 3))))
+        when(mockIndex.getTraceIdsByAnnotation(serviceName, "ann1", None, paddedTs, limit))
+          .thenReturn(Future(Seq(id(4, 4), id(1, 5), id(3, 4))))
+        when(mockIndex.getTraceIdsByAnnotation(serviceName, "key", Some(ByteBuffer.wrap("value".getBytes)), paddedTs, limit))
+          .thenReturn(Future(Seq(id(2, 3), id(4, 9), id(1, 9))))
 
-          one(mockIndex).getTracesDuration(Seq(1)) willReturn Future(Seq(TraceIdDuration(1, 100, 1)))
-        }
+        when(mockIndex.getTracesDuration(Seq(1))).thenReturn(Future(Seq(TraceIdDuration(1, 100, 1))))
 
         val response = qs.getTraceIds(request).apply()
-        response.`traceIds`.length mustEqual 1
-        response.`traceIds`(0) mustEqual 1
+        response.`traceIds`.length must equal (1)
+        response.`traceIds`(0) must equal (1)
 
-        response.`endTs` mustEqual 9
-        response.`startTs` mustEqual 9
+        response.`endTs` must equal (9)
+        response.`startTs` must equal (9)
       }
 
-      "find intersection" in {
+      "intersection occurs" when {
         "one id" in {
           val ids = Seq(
             Seq(IndexedTraceId(1, 100), IndexedTraceId(2, 140)),
             Seq(IndexedTraceId(1, 100))
           )
-          qs.traceIdsIntersect(ids) mustEqual Seq(IndexedTraceId(1, 100))
+          qs.traceIdsIntersect(ids) must equal (Seq(IndexedTraceId(1, 100)))
         }
 
         "multiple ids" in {
@@ -527,9 +523,9 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
             Seq(IndexedTraceId(2, 200), IndexedTraceId(4, 200), IndexedTraceId(7, 300), IndexedTraceId(3, 300))
           )
           val actual = qs.traceIdsIntersect(ids)
-          actual.length mustEqual 2
-          actual mustContain IndexedTraceId(2, 200)
-          actual mustContain IndexedTraceId(3, 300)
+          actual.length must equal (2)
+          actual must contain (IndexedTraceId(2, 200))
+          actual must contain (IndexedTraceId(3, 300))
         }
 
         "take max time for each id" in {
@@ -538,9 +534,9 @@ class QueryServiceSpec extends Specification with JMocker with ClassMocker {
             Seq(IndexedTraceId(1, 101), IndexedTraceId(2, 202))
           )
           val actual = qs.traceIdsIntersect(ids)
-          actual.length mustEqual 2
-          actual mustContain IndexedTraceId(1, 101)
-          actual mustContain IndexedTraceId(2, 202)
+          actual.length must equal (2)
+          actual must contain (IndexedTraceId(1, 101))
+          actual must contain (IndexedTraceId(2, 202))
         }
       }
     }

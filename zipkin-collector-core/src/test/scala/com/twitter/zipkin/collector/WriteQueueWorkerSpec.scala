@@ -18,11 +18,16 @@ package com.twitter.zipkin.collector
 
 import com.twitter.finagle.Service
 import com.twitter.zipkin.common.{Annotation, Endpoint, Span}
-import org.specs.Specification
-import org.specs.mock.{ClassMocker, JMocker}
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 import java.util.concurrent.BlockingQueue
 
-class WriteQueueWorkerSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class WriteQueueWorkerSpec extends WordSpec {
   "WriteQueueWorker" should {
     "hand off to processor" in {
       val service = mock[Service[Span, Unit]]
@@ -31,10 +36,8 @@ class WriteQueueWorkerSpec extends Specification with JMocker with ClassMocker {
       val w = new WriteQueueWorker[Span](queue, service)
       val span = Span(123, "boo", 456, None, List(Annotation(123, "value", Some(Endpoint(1,2,"service")))), Nil)
 
-      expect {
-        one(service).apply(span)
-      }
       w.process(span)
+      verify(service, times(1)).apply(span)
     }
   }
 }

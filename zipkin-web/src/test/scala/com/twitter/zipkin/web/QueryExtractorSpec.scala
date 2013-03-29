@@ -22,22 +22,25 @@ import com.twitter.util.Time
 import com.twitter.zipkin.common.{AnnotationType, BinaryAnnotation}
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
-import org.specs.mock.{ClassMocker, JMocker}
-import org.specs.Specification
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
 import scala.collection.mutable
 
-class QueryExtractorSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class QueryExtractorSpec extends WordSpec {
 
   def request(p: (String, String)*) = new Request(FinagleRequest(p:_*)) {
     routeParams = mutable.Map(p:_*)
   }
 
   "QueryExtractor" should {
-    "require" in {
-      "serviceName" in {
-        val r = request()
-        QueryExtractor(r) mustBe None
-      }
+    "require serviceName" in {
+      val r = request()
+      QueryExtractor(r) must be (None)
     }
 
     "parse params" in {
@@ -50,53 +53,53 @@ class QueryExtractorSpec extends Specification with JMocker with ClassMocker {
         "endDatetime" -> formatted,
         "limit" -> "1000")
       val actual = QueryExtractor(r)
-      actual mustNotBe None
+      actual must not be (None)
 
-      actual.get.serviceName must_== "myService"
-      actual.get.spanName mustNotBe None
-      actual.get.spanName.get must_== "mySpan"
-      actual.get.endTs must_== new SimpleDateFormat(fmt).parse(formatted).getTime * 1000
-      actual.get.limit must_== 1000
+      actual.get.serviceName must equal ("myService")
+      actual.get.spanName must not be (None)
+      actual.get.spanName.get must equal ("mySpan")
+      actual.get.endTs must equal (new SimpleDateFormat(fmt).parse(formatted).getTime * 1000)
+      actual.get.limit must equal (1000)
     }
 
-    "have defaults for" in {
-      "endDateTime" in Time.withCurrentTimeFrozen { tc =>
+    "have defaults" when {
+      "endDateTime is not supplied" in Time.withCurrentTimeFrozen { tc =>
         val t = Time.now
         val r = request("serviceName" -> "myService")
         val actual = QueryExtractor(r)
-        actual mustNotBe None
-        actual.get.endTs must_== t.sinceEpoch.inMicroseconds
+        actual must not be (None)
+        actual.get.endTs must equal (t.sinceEpoch.inMicroseconds)
       }
 
-      "limit" in {
+      "limit is not supplied" in {
         val r = request("serviceName" -> "myService")
         val actual = QueryExtractor(r)
-        actual mustNotBe None
-        actual.get.limit mustBe Constants.DefaultQueryLimit
+        actual must not be (None)
+        actual.get.limit must be (Constants.DefaultQueryLimit)
       }
     }
 
-    "parse spanName special cases" in {
+    "parse spanName special cases" when {
       "all" in {
         val r = request("serviceName" -> "myService", "spanName" -> "all")
         val actual = QueryExtractor(r)
-        actual mustNotBe None
-        actual.get.spanName mustBe None
+        actual must not be (None)
+        actual.get.spanName must be (None)
       }
 
-      "" in {
+      "\"\"" in {
         val r = request("serviceName" -> "myService", "spanName" -> "")
         val actual = QueryExtractor(r)
-        actual mustNotBe None
-        actual.get.spanName mustBe None
+        actual must not be (None)
+        actual.get.spanName must be (None)
       }
 
       "valid" in {
         val r = request("serviceName" -> "myService", "spanName" -> "something")
         val actual = QueryExtractor(r)
-        actual mustNotBe None
-        actual.get.spanName mustNotBe None
-        actual.get.spanName.get must_== "something"
+        actual must not be (None)
+        actual.get.spanName must not be (None)
+        actual.get.spanName.get must equal ("something")
       }
     }
 
@@ -106,9 +109,9 @@ class QueryExtractorSpec extends Specification with JMocker with ClassMocker {
         "annotations[0]" -> "finagle.retry",
         "annotations[1]" -> "finagle.timeout")
       val actual = QueryExtractor(r)
-      actual mustNotBe None
-      actual.get.annotations mustNotBe None
-      actual.get.annotations.get must_== Seq("finagle.retry", "finagle.timeout")
+      actual must not be (None)
+      actual.get.annotations must not be (None)
+      actual.get.annotations.get must equal (Seq("finagle.retry", "finagle.timeout"))
     }
 
     "parse key value annotations" in {
@@ -118,9 +121,9 @@ class QueryExtractorSpec extends Specification with JMocker with ClassMocker {
         "keyValueAnnotations[0][val]" -> "500"
       )
       val actual = QueryExtractor(r)
-      actual mustNotBe None
-      actual.get.binaryAnnotations mustNotBe None
-      actual.get.binaryAnnotations.get must_== Seq(BinaryAnnotation("http.responsecode", ByteBuffer.wrap("500".getBytes), AnnotationType.String, None))
+      actual must not be (None)
+      actual.get.binaryAnnotations must not be (None)
+      actual.get.binaryAnnotations.get must equal (Seq(BinaryAnnotation("http.responsecode", ByteBuffer.wrap("500".getBytes), AnnotationType.String, None)))
     }
   }
 }

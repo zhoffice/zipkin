@@ -16,12 +16,15 @@ object Zipkin extends Build {
   val travisCi = Option(System.getenv("SBT_TRAVIS_CI")) // for adding travis ci maven repos before others
 
   lazy val testDependencies = Seq(
-    "org.scala-tools.testing" % "specs_2.9.1"  % "1.6.9" % "test",
-    "org.jmock"               % "jmock"        % "2.4.0" % "test",
-    "org.hamcrest"            % "hamcrest-all" % "1.1"   % "test",
-    "cglib"                   % "cglib"        % "2.2.2" % "test",
-    "asm"                     % "asm"          % "1.5.3" % "test",
-    "org.objenesis"           % "objenesis"    % "1.1"   % "test"
+    "junit"                   % "junit"           % "4.11"  % "test",
+    "org.scalatest"           % "scalatest_2.9.1" % "1.9.1" % "test",
+    "org.mockito"             % "mockito-all"     % "1.9.5" % "test",
+    "org.scala-tools.testing" % "specs_2.9.1"     % "1.6.9" % "test",
+    "org.jmock"               % "jmock"           % "2.4.0" % "test",
+    "org.hamcrest"            % "hamcrest-all"    % "1.1"   % "test",
+    "cglib"                   % "cglib"           % "2.2.2" % "test",
+    "asm"                     % "asm"             % "1.5.3" % "test",
+    "org.objenesis"           % "objenesis"       % "1.1"   % "test"
   )
 
   def zipkinSettings = Seq(

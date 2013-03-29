@@ -18,10 +18,14 @@ package com.twitter.zipkin.collector.sampler.adaptive.policy
 import com.twitter.zipkin.collector.sampler.adaptive.BoundedBuffer
 import com.twitter.zipkin.config.sampler.AdjustableRateConfig
 import com.twitter.zipkin.config.sampler.adaptive.ZooKeeperAdaptiveSamplerConfig
-import org.specs.mock.{JMocker, ClassMocker}
-import org.specs.Specification
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, when}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-class LeaderPolicySpec extends Specification with JMocker with ClassMocker {
+class LeaderPolicySpec extends WordSpec {
 
   val _config = mock[ZooKeeperAdaptiveSamplerConfig]
   val _sampleRate = mock[AdjustableRateConfig]
@@ -36,11 +40,11 @@ class LeaderPolicySpec extends Specification with JMocker with ClassMocker {
       val composed: LeaderPolicy[BoundedBuffer] = filter andThen policy
 
 
-      composed(buf) mustEqual None // buf empty, so invalid value
+      composed(buf) must equal (None) // buf empty, so invalid value
       buf.update(-1)
-      composed(buf) mustEqual None // invalid value
+      composed(buf) must equal (None) // invalid value
       buf.update(1)
-      composed(buf) mustEqual Some(default)
+      composed(buf) must equal (Some(default))
 
     }
   }

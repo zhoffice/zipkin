@@ -19,10 +19,15 @@ package com.twitter.zipkin.collector.filter
 import com.twitter.finagle.Service
 import com.twitter.zipkin.common.Span
 import com.twitter.zipkin.collector.sampler.{EverythingGlobalSampler, NullGlobalSampler}
-import org.specs.Specification
-import org.specs.mock.{JMocker, ClassMocker}
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers._
+import org.scalatest.mock.MockitoSugar._
+import org.mockito.Mockito.{never, times, verify, verifyNoMoreInteractions}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-class SamplerFilterSpec extends Specification with JMocker with ClassMocker {
+@RunWith(classOf[JUnitRunner])
+class SamplerFilterSpec extends WordSpec {
 
   "SamplerFilter" should {
     val mockService = mock[Service[Span, Unit]]
@@ -31,31 +36,24 @@ class SamplerFilterSpec extends Specification with JMocker with ClassMocker {
       val span = Span(12345, "methodcall", 666, None, List(), Nil, true)
       val samplerProcessor = new SamplerFilter(NullGlobalSampler)
 
-      expect {
-        one(mockService).apply(span)
-      }
-
       samplerProcessor(span, mockService)
+      verify(mockService, times(1)).apply(span)
     }
 
     "let the span pass if debug flag false and sampler says yes" in {
       val span = Span(12345, "methodcall", 666, None, List(), Nil, false)
       val samplerProcessor = new SamplerFilter(EverythingGlobalSampler)
 
-      expect {
-        one(mockService).apply(span)
-      }
-
       samplerProcessor(span, mockService)
+      verify(mockService, times(1)).apply(span)
     }
 
     "don't let the span pass if debug flag false and sampler says no" in {
       val span = Span(12345, "methodcall", 666, None, List(), Nil, false)
       val samplerProcessor = new SamplerFilter(NullGlobalSampler)
 
-      expect {}
-
       samplerProcessor(span, mockService)
+      verifyNoMoreInteractions(mockService)
     }
   }
 }
