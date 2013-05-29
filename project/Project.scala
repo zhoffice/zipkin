@@ -27,7 +27,8 @@ object Zipkin extends Build {
 
   lazy val testOpts = Seq(
     Tests.Filter { testName =>
-      travisCi == Some("true") && testName != "ZipkinSpec"
+      // The ZipkinSpec test gives us some trouble in travis due to memory issues, so we disable it
+      travisCi != Some("true") || testName != "ZipkinSpec"
     }
   )
 
@@ -78,7 +79,7 @@ object Zipkin extends Build {
   ).settings(
     name := "zipkin-test",
     libraryDependencies ++= testDependencies,
-    testOptions ++= testOpts
+    testOptions in Test := testOpts
   ) dependsOn(queryService, collectorService)
 
   lazy val common =
