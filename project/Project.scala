@@ -27,6 +27,7 @@ object Zipkin extends Build {
 
   lazy val testOpts = Seq(
     Tests.Filter { testName =>
+      println("test name is: " + testName)
       // The ZipkinSpec test gives us some trouble in travis due to memory issues, so we disable it
       travisCi != Some("true") || testName != "ZipkinSpec"
     }
