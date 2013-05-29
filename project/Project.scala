@@ -25,6 +25,12 @@ object Zipkin extends Build {
     "org.objenesis"           %  "objenesis"    % "1.1"   % "test"
   )
 
+  lazy val testOpts = Seq(
+    Tests.Filter { testName =>
+      travisCi == Some("true") && testName != "ZipkinSpec"
+    }
+  )
+
   def zipkinSettings = Seq(
     organization := "com.twitter",
     version := "1.1.0-SNAPSHOT",
@@ -71,7 +77,8 @@ object Zipkin extends Build {
     settings = defaultSettings
   ).settings(
     name := "zipkin-test",
-    libraryDependencies ++= testDependencies
+    libraryDependencies ++= testDependencies,
+    testOptions ++= testOpts
   ) dependsOn(queryService, collectorService)
 
   lazy val common =
