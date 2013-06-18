@@ -12,6 +12,7 @@ object Zipkin extends Build {
   val SCROOGE_VERSION = "3.1.1"
   val ZOOKEEPER_VERSION = "0.0.30"
   val ALGEBIRD_VERSION  = "0.1.13"
+  val SLICK_VERSION     = "1.0.1"
 
   val proxyRepo = Option(System.getenv("SBT_PROXY_REPO"))
   val travisCi = Option(System.getenv("SBT_TRAVIS_CI")) // for adding travis ci maven repos before others
@@ -65,7 +66,7 @@ object Zipkin extends Build {
     Project(
       id = "zipkin",
       base = file(".")
-    ) aggregate(test, queryCore, queryService, common, scrooge, collectorScribe, web, cassandra, collectorCore, collectorService, kafka) // TODO - add redis back in
+    ) aggregate(test, queryCore, queryService, common, scrooge, collectorScribe, web, cassandra, slick, collectorCore, collectorService, kafka) // TODO - add redis back in
 
   lazy val test   = Project(
     id = "zipkin-test",
@@ -154,6 +155,23 @@ object Zipkin extends Build {
       "com.twitter"     % "cassie-serversets" % CASSIE_VERSION,
       "com.twitter"     % "util-logging"      % UTIL_VERSION,
       "org.iq80.snappy" % "snappy"            % "0.1"
+    ) ++ testDependencies,
+
+    /* Add configs to resource path for ConfigSpec */
+    unmanagedResourceDirectories in Test <<= baseDirectory {
+      base =>
+        (base / "config" +++ base / "src" / "test" / "resources").get
+    }
+  ).dependsOn(scrooge)
+
+  lazy val slick = Project(
+    id = "zipkin-slick",
+    base = file("zipkin-slick"),
+    settings = defaultSettings
+  ).settings(
+    libraryDependencies ++= Seq(
+      "com.typesafe.slick" %% "slick"         % "1.0.1",
+      "org.slf4j"          %  "slf4j-log4j12" % SLICK_VERSION
     ) ++ testDependencies,
 
     /* Add configs to resource path for ConfigSpec */
