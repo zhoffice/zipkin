@@ -2,7 +2,7 @@ language: scala
 services:
   - redis
 scala:
-  - 2.9.1
+  - 2.10.1
 jdk:
   - openjdk7
 script: "env SBT_TRAVIS_CI=true bin/sbt test"
