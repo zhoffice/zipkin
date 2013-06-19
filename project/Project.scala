@@ -171,7 +171,8 @@ object Zipkin extends Build {
   ).settings(
     libraryDependencies ++= Seq(
       "com.typesafe.slick" %% "slick"         % "1.0.1",
-      "org.slf4j"          %  "slf4j-log4j12" % SLICK_VERSION
+      "org.slf4j"          %  "slf4j-log4j12" % SLICK_VERSION,
+      "org.xerial"         %  "sqlite-jdbc"    % "3.7.17"
     ) ++ testDependencies,
 
     /* Add configs to resource path for ConfigSpec */
@@ -218,7 +219,7 @@ object Zipkin extends Build {
       base =>
         (base / "config" +++ base / "src" / "test" / "resources").get
     }
-  ).dependsOn(queryCore, cassandra)
+  ).dependsOn(queryCore, cassandra, slick)
 
   lazy val collectorScribe =
     Project(
@@ -260,7 +261,7 @@ object Zipkin extends Build {
       base =>
         (base / "config" +++ base / "src" / "test" / "resources").get
     }
-  ).dependsOn(collectorCore, collectorScribe, cassandra, kafka)
+  ).dependsOn(collectorCore, collectorScribe, cassandra, slick, kafka)
 
   lazy val web =
     Project(
