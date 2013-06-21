@@ -6,10 +6,10 @@ import com.twitter.scrooge.ScroogeSBT
 object Zipkin extends Build {
 
   val CASSIE_VERSION  = "0.25.2"
-  val FINAGLE_VERSION = "6.4.0"
+  val FINAGLE_VERSION = "6.5.0"
   val OSTRICH_VERSION = "9.1.1"
-  val UTIL_VERSION    = "6.3.4"
-  val SCROOGE_VERSION = "3.1.1"
+  val UTIL_VERSION    = "6.3.6"
+  val SCROOGE_VERSION = "3.1.9"
   val ZOOKEEPER_VERSION = "0.0.30"
   val ALGEBIRD_VERSION  = "0.1.13"
   val SLICK_VERSION     = "1.0.1"
@@ -90,6 +90,7 @@ object Zipkin extends Build {
         "com.twitter" %% "finagle-exception" % FINAGLE_VERSION,
         "com.twitter" %% "ostrich"           % OSTRICH_VERSION,
         "com.twitter" %% "util-core"         % UTIL_VERSION,
+        "com.twitter" %% "util-eval"         % UTIL_VERSION,
         "com.twitter" %% "algebird-core"    % ALGEBIRD_VERSION,
 
         "com.twitter.common.zookeeper" % "client"    % ZOOKEEPER_VERSION
