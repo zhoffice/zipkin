@@ -151,8 +151,8 @@ object Zipkin extends Build {
     settings = defaultSettings
   ).settings(
     libraryDependencies ++= Seq(
-      "com.twitter" % "cassie-core"       % CASSIE_VERSION,
-      "com.twitter" % "cassie-serversets" % CASSIE_VERSION,
+      //"com.twitter" % "cassie-core"       % CASSIE_VERSION,
+      //"com.twitter" % "cassie-serversets" % CASSIE_VERSION,
       "com.twitter" %% "util-logging"      % UTIL_VERSION,
       "org.iq80.snappy" % "snappy"            % "0.1"
     ) ++ testDependencies,
@@ -172,7 +172,7 @@ object Zipkin extends Build {
     libraryDependencies ++= Seq(
       "com.typesafe.slick" %% "slick"         % "1.0.1",
       "org.slf4j"          %  "slf4j-log4j12" % SLICK_VERSION,
-      "org.xerial"         %  "sqlite-jdbc"    % "3.7.17"
+      "org.xerial"         %  "sqlite-jdbc"    % "3.7.2"
     ) ++ testDependencies,
 
     /* Add configs to resource path for ConfigSpec */
@@ -270,7 +270,7 @@ object Zipkin extends Build {
       settings = defaultSettings
     ).settings(
       libraryDependencies ++= Seq(
-        "com.twitter" % "finatra" % "1.3.3",
+        "com.twitter" % "finatra" % "1.4.0-SNAPSHOT",
 
         "com.twitter.common.zookeeper" % "server-set" % "1.0.36",
 
