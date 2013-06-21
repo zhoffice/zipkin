@@ -9,7 +9,7 @@ import java.util.{Date, Properties}
 /**
  * Add various build-environment properties to a build.properties file in the built jar.
  */
-object BuildProperties extends Plugin {
+object BuildProperties {
   // most of this stuff is only supported by default in GitProjects
   import GitProject._
 

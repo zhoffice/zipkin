@@ -6,7 +6,7 @@ import Keys._
 import java.io.File
 import scala.collection.JavaConverters._
 
-object ScroogeSBT extends Plugin {
+object ScroogeSBT {
 
   def compile(
                log: Logger,
@@ -131,7 +131,7 @@ object ScroogeSBT extends Plugin {
     sourceGenerators <+= scroogeGen
   )
 
-  val newSettings = Seq(
+  val newSettings: Seq[Project.Setting[_]] = Seq(
     scroogeBuildOptions := Seq("--finagle")
   ) ++ inConfig(Test)(genThriftSettings) ++ inConfig(Compile)(genThriftSettings)
 }

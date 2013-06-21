@@ -1,12 +1,12 @@
 package com.twitter.sbt
 
 import sbt._
-import Keys._
+import sbt.Keys._
 
 /**
  * various tasks for working with git-based projects
  */
-object GitProject extends Plugin {
+object GitProject {
   val gitIsRepository = TaskKey[Boolean](
     "git-is-repository",
     "true if this is project is inside a git repo"
@@ -63,7 +63,7 @@ object GitProject extends Plugin {
     }
   }
 
-  val gitSettings = Seq(
+  lazy val gitSettings = Seq(
     gitIsRepository := { ("git status" ! NullLogger) == 0 },
     gitProjectSha <<= (gitIsRepository) map { isRepo =>
       ifRepo(isRepo) {

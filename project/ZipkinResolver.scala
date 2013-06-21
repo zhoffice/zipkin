@@ -5,7 +5,7 @@ import Keys._
  * archive resolving gets a bit tricky depending on if we're compiling in github, twitter,
  * or somewhere else
  */
-object ZipkinResolver extends Plugin {
+object ZipkinResolver {
 
   val proxyRepo = Option(System.getenv("SBT_PROXY_REPO"))
   val isTravisCi = "true".equalsIgnoreCase(System.getenv("SBT_TRAVIS_CI"))

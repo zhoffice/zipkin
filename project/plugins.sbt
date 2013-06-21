@@ -1,3 +1,4 @@
+scalaVersion := "2.10.2"
 
 resolvers ++= Seq(
   "travisci-central" at "http://maven.travis-ci.org/nexus/content/repositories/central/",
@@ -13,5 +14,5 @@ libraryDependencies ++= Seq(
     "org.codehaus.plexus"    % "plexus-utils"       % "1.5.4",
     "org.slf4j"              % "slf4j-api"          % "1.6.4",
     "org.slf4j"              % "slf4j-simple"       % "1.6.4",
-    "com.twitter"            % "scrooge-generator"  % "3.1.1")
+    "com.twitter"            %% "scrooge-generator"  % "3.1.9")
 

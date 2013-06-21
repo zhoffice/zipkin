@@ -8,7 +8,7 @@ import Keys._
  * build a twitter style packgae containing the packaged jar, all its deps,
  * configs, scripts, etc.
  */
-object PackageDist extends Plugin {
+object PackageDist {
   // only works for git projects
   import GitProject._
 
