@@ -16,7 +16,7 @@
 
 package com.twitter.zipkin.anormdb
 
-import com.twitter.zipkin.storage.anormdb.DB
+import com.twitter.zipkin.storage.anormdb.{AnormAggregates, DB}
 
 class AggregatesBuilder(db: DB) {
   def apply() = {

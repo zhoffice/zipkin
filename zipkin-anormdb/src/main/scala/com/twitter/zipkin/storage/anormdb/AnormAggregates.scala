@@ -25,6 +25,12 @@ import anorm._
 import anorm.SqlParser._
 import com.twitter.algebird.Moments
 
+/**
+ * Retrieve and store aggregate dependency information.
+ *
+ * The top annotations methods are stubbed because they're not currently
+ * used anywhere; that feature was never completed.
+ */
 case class AnormAggregates(db: DB, openCon: Option[Connection] = None) extends Aggregates {
   // Database connection object
   private implicit val conn = openCon match {
@@ -38,49 +44,46 @@ case class AnormAggregates(db: DB, openCon: Option[Connection] = None) extends A
   def close() { conn.close() }
 
   /**
-   * Get the top annotations for a service name
+   * Get the dependencies in a time range.
+   *
+   * endDate is optional and if not passed defaults to startDate plus one day.
    */
   def getDependencies(startDate: Time, endDate: Option[Time]=None): Future[Dependencies] = {
+    val startMs = startDate.inMicroseconds
+    val endMs = endDate.getOrElse(startDate + 1.day).inMicroseconds
 
-    // floor to nearest day in microseconds
-    val realStart = startDate.floor(1.day).inMicroseconds
-    val realEnd = endDate.getOrElse(startDate).floor(1.day).inMicroseconds
-
-    val result: List[DependLink] = SQL(
-      """SELECT l.dlid, startTs, endTs, parent, child, m0, m1, m2, m3, m4
+    val links: List[DependencyLink] = SQL(
+      """SELECT parent, child, m0, m1, m2, m3, m4
         |FROM zipkin_dependency_links AS l
         |LEFT JOIN zipkin_dependencies AS d
         |  ON l.dlid = d.dlid
-        |WHERE startTs >= {startTs}
-        |  AND endTs <= {endTs}
+        |WHERE start_ts >= {startTs}
+        |  AND end_ts <= {endTs}
         |ORDER BY l.dlid DESC
       """.stripMargin)
-    .on("startTs" -> realStart)
-    .on("endTs" -> realEnd)
-    .as((long("l.dlid") ~ long("startTs") ~ long("endTs") ~ str("parent") ~ str("child") ~ long("m0") ~ get[Double]("m1") ~ get[Double]("m2") ~ get[Double]("m3") ~ get[Double]("m4") map {
-      case a~b~c~d~e~f~g~h~i~j => DependLink(a, b, c, d, e, f, g, h, i, j)
+    .on("startTs" -> startMs)
+    .on("endTs" -> endMs)
+    .as((str("parent") ~ str("child") ~ long("m0") ~ get[Double]("m1") ~ get[Double]("m2") ~ get[Double]("m3") ~ get[Double]("m4") map {
+      case parent ~ child ~ m0 ~ m1 ~ m2 ~ m3 ~ m4 => new DependencyLink(
+        new Service(parent),
+        new Service(child),
+        new Moments(m0, m1, m2, m3, m4)
+      )
     }) *)
 
     Future {
-      val deps: List[(Long, Time, Time)] = result.map {
-        d => (d.dlid, Time.fromMilliseconds(d.startTs), Time.fromMilliseconds(d.endTs))
-      }
-      deps.map { dep =>
-        val links = result.filter(_.dlid == dep._1).map { link =>
-          val moments = new Moments(link.m0, link.m1, link.m2, link.m3, link.m4)
-          new DependencyLink(new Service(link.parent), new Service(link.child), moments)
-        }
-        new Dependencies(dep._2, dep._3, links)
-      }
+      new Dependencies(startDate, Time.fromNanoseconds(endMs*1000), links)
     }
   }
 
   /**
+   * Write dependencies
+   *
    * Synchronize these so we don't do concurrent writes from the same box
    */
   def storeDependencies(dependencies: Dependencies): Future[Unit] = {
     val dlid = SQL("""INSERT INTO zipkin_dependencies
-          |  (startTs, endTs)
+          |  (start_ts, end_ts)
           |VALUES ({startTs}, {endTs})
         """.stripMargin)
       .on("startTs" -> dependencies.startTime.inMicroseconds)
@@ -110,29 +113,27 @@ case class AnormAggregates(db: DB, openCon: Option[Connection] = None) extends A
    * Get the top annotations for a service name
    */
   def getTopAnnotations(serviceName: String): Future[Seq[String]] = {
-
+    Future.value(Seq[String]())
   }
 
   /**
    * Get the top key value annotation keys for a service name
    */
   def getTopKeyValueAnnotations(serviceName: String): Future[Seq[String]] = {
-
+    Future.value(Seq[String]())
   }
 
   /**
    * Override the top annotations for a service
    */
   def storeTopAnnotations(serviceName: String, a: Seq[String]): Future[Unit] = {
-
+    Future.Unit
   }
 
   /**
    * Override the top key value annotation keys for a service
    */
   def storeTopKeyValueAnnotations(serviceName: String, a: Seq[String]): Future[Unit] = {
-
+    Future.Unit
   }
-
-  case class DependLink(dlid: Long, startTs: Long, endTs: Long, parent: String, child: String, m0: Long, m1: Double, m2: Double, m3: Double, m4: Double)
 }

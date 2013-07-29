@@ -52,11 +52,10 @@ case class CassandraAggregates(
    */
   def getDependencies(startDate: Time, endDate: Option[Time]) : Future[Dependencies] = {
 
-    // floor to nearest day in microseconds
-    val realStart = startDate.floor(1.day).inMicroseconds
-    val realEnd = endDate.getOrElse(startDate).floor(1.day).inMicroseconds
+    val startMs = startDate.inMicroseconds
+    val endMs = endDate.getOrElse(startDate + 1.day).inMicroseconds
 
-    val rows = new NumericRange.Inclusive[Long](realEnd, realStart, 1.days.inMicroseconds)
+    val rows = new NumericRange.Inclusive[Long](startMs, endMs, 1.days.inMicroseconds)
 
     val result: Future[Iterable[gen.Dependencies]] =
       dependenciesCF.multigetRows(rows.toSet.asJava, None, None, Order.Normal, Int.MaxValue)
