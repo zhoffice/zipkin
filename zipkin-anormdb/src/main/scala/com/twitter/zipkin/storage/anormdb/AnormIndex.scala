@@ -116,20 +116,20 @@ case class AnormIndex(db: DB, openCon: Option[Connection] = None) extends Index 
         // Normal annotations
         case None => {
           SQL(
-            """SELECT trace_id, MAX(a_timestamp)
+            """SELECT trace_id, MAX(a_timestamp) as ts
               |FROM zipkin_annotations
               |WHERE service_name = {service_name}
               |  AND value = {annotation}
-              |  AND a_timestamp < {end_ts}
+              |  AND ts < {end_ts}
               |GROUP BY trace_id
-              |ORDER BY a_timestamp DESC
+              |ORDER BY ts DESC
               |LIMIT {limit}
             """.stripMargin)
             .on("service_name" -> serviceName)
             .on("annotation" -> annotation)
             .on("end_ts" -> endTs)
             .on("limit" -> limit)
-            .as((long("trace_id") ~ long("MAX(a_timestamp)") map flatten) *)
+            .as((long("trace_id") ~ long("ts") map flatten) *)
         }
       }
       result map { case (tId, ts) =>
