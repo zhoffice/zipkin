@@ -15,9 +15,11 @@
  */
 package com.twitter.zipkin.collector
 
+import com.twitter.app.App
+import com.twitter.zipkin.AwaitableClosable
 import com.twitter.zipkin.storage.WriteSpanStore
-import com.twitter.util.{Await, Closable, CloseAwaitably, Duration, Future, Time}
-import com.twitter.finagle.stats.StatsReceiver
+import com.twitter.util._
+import com.twitter.finagle.stats.{DefaultStatsReceiver, StatsReceiver}
 import com.twitter.zipkin.common.Span
 import com.twitter.server.TwitterServer
 
@@ -26,35 +28,36 @@ import com.twitter.server.TwitterServer
  * and implement `newReceiver` and `newSpanStore`. The base collector glues those two
  * together.
  */
-trait ZipkinCollectorServer extends TwitterServer {
+trait ZipkinCollectorFactory { self: App =>
   def newReceiver(stats: StatsReceiver, receive: Seq[Span] => Future[Unit]): SpanReceiver
   def newSpanStore(stats: StatsReceiver): WriteSpanStore
 
-  def main() {
-    val store = newSpanStore(statsReceiver)
-    val receiver = newReceiver(statsReceiver, store(_))
-    onExit { Closable.sequence(receiver, store).close() }
-    Await.all(receiver, store)
+  def newCollector(
+    stats: StatsReceiver = DefaultStatsReceiver.scope("collector")
+  ): AwaitableClosable = {
+    val store = newSpanStore(stats)
+    val receiver = newReceiver(stats, store(_))
+    AwaitableClosable.sequence(receiver, store)
   }
 }
 
 /**
  * A base collector that inserts a configurable queue between the receiver and store.
  */
-trait ZipkinQueuedCollectorServer extends ZipkinCollectorServer {
+trait ZipkinQueuedCollectorFactory extends ZipkinCollectorFactory { self: App =>
   val itemQueueMax = flag("zipkin.itemQueue.maxSize", 500, "max number of span items to buffer")
   val itemQueueConcurrency = flag("zipkin.itemQueue.concurrency", 10, "number of concurrent workers to process the write queue")
 
-  override def main() {
-    val store = newSpanStore(statsReceiver)
+  def newQueue(store: Seq[Span] => Future[Unit], stats: StatsReceiver): ItemQueue[Seq[Span]] =
+    new ItemQueue[Seq[Span]](
+      itemQueueMax(), itemQueueConcurrency(), store(_), stats.scope("ItemQueue"))
 
-    val queue = new ItemQueue[Seq[Span]](
-      itemQueueMax(), itemQueueConcurrency(), store(_), statsReceiver.scope("ItemQueue"))
-
-    val receiver = newReceiver(statsReceiver, queue.add(_))
-
-    onExit { Closable.sequence(receiver, queue, store).close() }
-
-    Await.all(queue, receiver, store)
+  override def newCollector(
+    stats: StatsReceiver = DefaultStatsReceiver.scope("collector")
+  ): AwaitableClosable = {
+    val store = newSpanStore(stats)
+    val queue = newQueue(store(_), stats)
+    val receiver = newReceiver(stats, queue.add(_))
+    AwaitableClosable.sequence(receiver, queue, store)
   }
 }

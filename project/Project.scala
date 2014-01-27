@@ -108,7 +108,8 @@ object Zipkin extends Build {
       query, queryCore, queryService, web,
       collectorScribe, collectorCore, collectorService,
       sampler, receiverScribe, collector,
-      cassandra, anormDB, kafka, redis, hbase
+      cassandra, anormDB, kafka, redis, hbase,
+      simple
     )
 
   lazy val test   = Project(
@@ -255,6 +256,17 @@ object Zipkin extends Build {
     }
   ).dependsOn(common, scrooge)
 
+  lazy val simple =
+    Project(
+      id = "zipkin-simple",
+      base = file("zipkin-simple"),
+      settings = defaultSettings
+    ).settings(
+      libraryDependencies ++= Seq(
+        util("logging")
+      )
+    ).dependsOn(web, query, cassandra, receiverScribe, zookeeper, collector)
+
   lazy val query =
     Project(
       id = "zipkin-query",
@@ -265,7 +277,8 @@ object Zipkin extends Build {
         finagle("thriftmux"),
         finagle("zipkin"),
         util("app"),
-        util("core")
+        util("core"),
+        "com.twitter" %% "twitter-server"    % TwitterServerVersion
       ) ++ testDependencies
     ).dependsOn(common, scrooge)
 

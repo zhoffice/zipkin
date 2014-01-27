@@ -15,16 +15,18 @@
  */
 package com.twitter.zipkin.web
 
+import com.twitter.zipkin.AwaitableClosable
 import com.twitter.conversions.time._
 import com.twitter.finagle.http.HttpMuxer
 import com.twitter.finagle.{Http, Thrift}
 import com.twitter.server.TwitterServer
+import com.twitter.app.App
 import com.twitter.util.{Await, Future}
 import com.twitter.zipkin.common.mustache.ZipkinMustache
 import com.twitter.zipkin.gen.ZipkinQuery
 import java.net.InetSocketAddress
 
-object Main extends TwitterServer {
+trait ZipkinWeb { self: App =>
   import Handlers._
 
   private[this] val resourceDirs = Map(
@@ -34,28 +36,28 @@ object Main extends TwitterServer {
     "/public/templates" -> "text/plain"
   )
 
-  val serverPort = flag("zipkin.web.port", new InetSocketAddress(8080), "Listening port for the zipkin web frontend")
+  val webServerPort = flag("zipkin.web.port", new InetSocketAddress(8080), "Listening port for the zipkin web frontend")
 
-  val rootUrl = flag("zipkin.web.rootUrl", "http://localhost:8080/", "Url where the service is located")
-  val cacheResources = flag("zipkin.web.cacheResources", false, "cache resources (mustache, static sources, etc)")
-  val pinTtl = flag("zipkin.web.pinTtl", 30.days, "Length of time pinned traces should exist")
-  val resourcePathPrefix = flag("zipkin.web.resourcePathPrefix", "/public", "Path used for static resources")
+  val webRootUrl = flag("zipkin.web.rootUrl", "http://localhost:8080/", "Url where the service is located")
+  val webCacheResources = flag("zipkin.web.cacheResources", false, "cache resources (mustache, static sources, etc)")
+  val webPinTtl = flag("zipkin.web.pinTtl", 30.days, "Length of time pinned traces should exist")
 
   // TODO: make this idomatic
-  val queryClientLocation = flag("zipkin.queryClient.location", "127.0.0.1:9411", "Location of the query server")
+  val webQueryClientLocation = flag("zipkin.queryClient.location", "127.0.0.1:9411", "Location of the query server")
 
-  def main() {
-    ZipkinMustache.cache = cacheResources()
+  // TODO: ThriftMux
+  lazy val webQueryClient: ZipkinQuery[Future] =
+    Thrift.newIface[ZipkinQuery[Future]]("ZipkinQuery=" + webQueryClientLocation())
 
-    // TODO: ThriftMux
-    val queryClient = Thrift.newIface[ZipkinQuery.FutureIface]("ZipkinQuery=" + queryClientLocation())
+  def webServer(queryClient: ZipkinQuery[Future] = webQueryClient): AwaitableClosable = {
+    ZipkinMustache.cache = webCacheResources()
 
     val muxer = Seq(
-      ("/public/", handlePublic(resourceDirs, cacheResources())),
-      ("/", addLayout(rootUrl()) andThen handleIndex(queryClient)),
-      ("/traces/:id", addLayout(rootUrl()) andThen handleTraces),
-      ("/static", addLayout(rootUrl()) andThen handleStatic),
-      ("/aggregates", addLayout(rootUrl()) andThen handleAggregates),
+      ("/public/", handlePublic(resourceDirs, webCacheResources())),
+      ("/", addLayout(webRootUrl()) andThen handleIndex(queryClient)),
+      ("/traces/:id", addLayout(webRootUrl()) andThen handleTraces),
+      ("/static", addLayout(webRootUrl()) andThen handleStatic),
+      ("/aggregates", addLayout(webRootUrl()) andThen handleAggregates),
       ("/api/query", handleQuery(queryClient)),
       ("/api/services", handleServices(queryClient)),
       ("/api/spans", requireServiceName andThen handleSpans(queryClient)),
@@ -66,7 +68,7 @@ object Main extends TwitterServer {
       ("/api/get/:id", handleGetTrace(queryClient)),
       ("/api/trace/:id", handleGetTrace(queryClient)),
       ("/api/is_pinned/:id", handleIsPinned(queryClient)),
-      ("/api/pin/:id/:state", handleTogglePin(queryClient, pinTtl()))
+      ("/api/pin/:id/:state", handleTogglePin(queryClient, webPinTtl()))
     ).foldLeft(new HttpMuxer) { case (m , (p, handler)) =>
       val path = p.split("/").toList
       val handlePath = path.takeWhile { t => !(t.startsWith(":") || t.startsWith("?:")) }
@@ -80,8 +82,13 @@ object Main extends TwitterServer {
         handler)
     }
 
-    val server = Http.serve(serverPort(), muxer)
-    onExit { server.close() }
+    AwaitableClosable.all(Http.serve(webServerPort(), muxer))
+  }
+}
+
+object Main extends TwitterServer with ZipkinWeb {
+  def main() {
+    val server = webServer()
     Await.ready(server)
   }
 }
