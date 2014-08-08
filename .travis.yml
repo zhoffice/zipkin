@@ -8,4 +8,4 @@ jdk:
   - openjdk6
 script:
   - "umask 0022"
-  - "sbt ++$TRAVIS_SCALA_VERSION clean test"
+  - "./sbt ++$TRAVIS_SCALA_VERSION clean test"
