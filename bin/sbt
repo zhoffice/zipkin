@@ -24,17 +24,7 @@ test -f ~/.sbtconfig && . ~/.sbtconfig
 java -ea                          \
   $SBT_OPTS                       \
   $JAVA_OPTS                      \
-  -XX:+AggressiveOpts             \
-  -XX:+UseParNewGC                \
-  -XX:+UseConcMarkSweepGC         \
-  -XX:+CMSParallelRemarkEnabled   \
-  -XX:+CMSClassUnloadingEnabled   \
-  -XX:MaxPermSize=1024m           \
-  -XX:SurvivorRatio=128           \
-  -XX:MaxTenuringThreshold=0      \
-  -XX:ReservedCodeCacheSize=64m   \
-  -Xss8M                          \
   -Xms512M                        \
   -Xmx2G                          \
-  -server                         \
+  -Xverbose:gc                    \
   -jar $sbtjar "$@"
