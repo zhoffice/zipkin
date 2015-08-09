@@ -1,0 +1,10 @@
+#org.springsource.ide.eclipse.gradle.core.preferences.GradleImportPreferences
+#Sun Aug 09 09:49:01 CST 2015
+addResourceFilters=true
+afterTasks=afterEclipseImport;
+beforeTasks=cleanEclipse;eclipse;
+enableAfterTasks=true
+enableBeforeTasks=true
+enableDSLD=false
+enableDependendencyManagement=true
+projects=;zipkin-aggregate;zipkin-anormdb;zipkin-cassandra;zipkin-collector;zipkin-collector-core;zipkin-collector-scribe;zipkin-collector-service;zipkin-common;zipkin-example;zipkin-query;zipkin-query-core;zipkin-query-service;zipkin-receiver-kafka;zipkin-receiver-scribe;zipkin-redis;zipkin-redis-example;zipkin-sampler;zipkin-scrooge;zipkin-thrift;zipkin-tracegen;zipkin-web;zipkin-zookeeper;

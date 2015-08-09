@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>zipkin-collector</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.scala-ide.sdt.core.scalabuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.scala-ide.sdt.core.scalanature</nature>
+		<nature>org.springsource.ide.eclipse.gradle.core.nature</nature>
+		<nature>org.eclipse.jdt.core.javanature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>ZIPKIN_SCALA_THRIFT</name>
+			<type>2</type>
+			<locationURI>ZIPKIN_SCALA_THRIFT</locationURI>
+		</link>
+	</linkedResources>
+	<variableList>
+		<variable>
+			<name>ZIPKIN_SCALA_THRIFT</name>
+			<value>file:/D:/scala_workspace/zipkin/zipkin-scrooge/build/gen-src</value>
+		</variable>
+	</variableList>
+</projectDescription>

@@ -1,0 +1,5 @@
+#org.springsource.ide.eclipse.gradle.core.preferences.GradleProjectPreferences
+#Sun Aug 09 10:44:09 CST 2015
+build.family.org.gradle.tooling.model.eclipse.HierarchicalEclipseProject=;zipkin-aggregate;zipkin-anormdb;zipkin-cassandra;zipkin-collector;zipkin-collector-core;zipkin-collector-scribe;zipkin-collector-service;zipkin-common;zipkin-example;zipkin-query;zipkin-query-core;zipkin-query-service;zipkin-receiver-kafka;zipkin-receiver-scribe;zipkin-redis;zipkin-redis-example;zipkin-sampler;zipkin-scrooge;zipkin-thrift;zipkin-tracegen;zipkin-web;zipkin-zookeeper;
+org.springsource.ide.eclipse.gradle.linkedresources=
+org.springsource.ide.eclipse.gradle.rootprojectloc=
